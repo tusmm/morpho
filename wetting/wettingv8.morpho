@@ -242,6 +242,8 @@ class WettingExperiment {
         // add all energy and constraint to the problem
         self.problem.addenergy(surface_area_bottom, selection=self.bottom_bound, prefactor=delta_sigma_minus_sigma)
         self.problem.addenergy(surface_area_air, prefactor=self.sigma)
+
+        // gravity
         self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g)
         self.problem.addconstraint(volume_constraint)
 
@@ -274,18 +276,27 @@ class WettingExperiment {
 
 // main
 // surface - surface does not do anything, just shows
-var r = 2
+var r = 1
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
 var surface_graphic = plotmesh(surface, grade = [1,2])
 
 // cube and optimize
 //WettingExperiment(sigma, density, gravity, deltaSigma, radius)
-var cube = WettingExperiment(3, 1, 9.8, 3, r)
+var params = [
+    // [7, 0, 9.8, 1, r] // round droplet shape
+    // [1, 0, 9.8, 0, r] // cube shape
+    // [10, 10, 9.8, 4, r] // hot airballoon shape
+    [10, 20, 9,8, 4, r] // still a balloon shape, it could be that the selection is pulling down too much
+]
+
+var cube = WettingExperiment(params[0][0], params[0][1], params[0][2], params[0][3], params[0][4])
 
 var opt = cube.getopt()
 var ropt = cube.getropt() // commented out for checking how it would look without regulator
 
 // cube.show(highlightBound=true)
+
+// notes: is surface tension too high?
 
 var refmax = 4
 var itermax = 1
