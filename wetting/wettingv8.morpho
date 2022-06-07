@@ -4,23 +4,18 @@ import optimize
 /*
 Wetting Experiment class that encapsulate the experiment model.
 states: 
-import meshtools
-import plot
-import optimize
-*/
-/*
-Wetting Experiment class that encapsulate the experiment model.
-states: 
     self.sigma: double              // prefactor for surface tension 
     self.rho: double                // density of the liquid
     self.g: double                  // gravity in m/s^2
     self.deltaSigma: double         // prefactor for adhesion
+    self.r: double                  // radius of the cylinder(surface)
     self.cube: MeshBuilder          // mesh of the experiment 
     self.bottom_bound: Selection    // selection of all vertices at bottom bound
     self.problem: OptimizationProblem // problem that defines all the energies and constraint function
     self.regulator: OptimizationProblem // optimizer that makes the vertices evenly spaced 
     self.opt: ShapeOptimizer            // Shape optimizer that updates the mesh based on the problem
     self.ropt: ShapeOptimizer           // Shape optimizer that regulate the mesh based on requests
+    self.delta_cylinder: Double         // Width(thickness) of the cylinder(surface)
 methods:
     show(title=nil, highlightBound=false, bound=nil)    // show the visual of self.cube
     regularize(refiter, showEachIter=false)             // regularize method that regularize the mesh.
@@ -37,12 +32,15 @@ class WettingExperiment {
         @param rho: double                // density of the liquid
         @param g: double                  // gravity in m/s^2
         @param deltaSigma: double         // prefactor for adhesion
+        @param r: double                  // radius of the surface -- we are testing on a cylinder(6/7 )
     */
-    init(sigma, rho, g, deltaSigma) {
+    init(sigma, rho, g, deltaSigma, r) {
         self.sigma = sigma
         self.rho = rho
         self.g = g
         self.deltaSigma = deltaSigma
+        self.r = r
+        self.delta_cylinder = 0.1
         self._makeCubeMesh()
         self._declareProblem()
         self._declareRegulator() // commented out for checking how it would look without regulator
@@ -105,8 +103,8 @@ class WettingExperiment {
         var refmap=mr.refine()
         // Perform the refinement
         // center of the cylinder 00 -r -1/2
-        var r = 2
-        var newbnd=Selection(refmap[self.cube], fn(x,y,z) 0.1>abs(((z+r+0.5))^2 + (y)^2)^(1/2)-r)
+        var newbnd=Selection(refmap[self.cube], fn(x,y,z) self.delta_cylinder>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
+        self.delta_cylinder = self.delta_cylinder/2
         refmap[self.bottom_bound]=newbnd
 
         // Tell any other objects that refer to the mesh, fields or selections to update their references using refmap
@@ -183,7 +181,7 @@ class WettingExperiment {
         self.opt = ShapeOptimizer(self.problem, self.cube)
         self.opt.stepsize = 0.001
         self.ropt = ShapeOptimizer(self.regulator, self.cube) 
-        self.ropt.fix(self.bottom_bound)                       
+        self.ropt.fix(self.bottom_bound)                
     }
     /*
     PRIVATE METHOD: gets the cross product
@@ -220,8 +218,7 @@ class WettingExperiment {
             [4,5,7,6]])
         self.cube.addgrade(1)
         // defines the bottom bound
-        var r = 2
-        self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.1>abs(((z+r+0.5))^2 + (y)^2)^(1/2)-r)
+        self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.1>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
         self.bottom_bound.addgrade(0)
         self.bottom_bound.addgrade(1)
         self.bottom_bound.addgrade(2)
@@ -231,29 +228,27 @@ class WettingExperiment {
     _declareProblem() {
         // initialize optimization problem
         self.problem = OptimizationProblem(self.cube)
-        // prefactor for bottom bound area calculation
-        var delta_sigma_minus_sigma = self.deltaSigma - self.sigma
         // declare surface tension energy
-        var surface_area = Area()
+        var delta_sigma_minus_sigma = self.deltaSigma - self.sigma // should be negative
+        var surface_area_bottom = Area()
+        var surface_area_air = Area()
         // declare gravity potential energy
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (x[2]^2)/2)
         // declare adhesion
         var adhesion = Area()
         // declare volume constraint
         var volume_constraint = VolumeEnclosed()
-
+        
         // add all energy and constraint to the problem
-        self.problem.addenergy(surface_area, selection=self.bottom_bound, prefactor=self.sigma*delta_sigma_minus_sigma)
-        self.problem.addenergy(surface_area, prefactor=self.sigma)
+        self.problem.addenergy(surface_area_bottom, selection=self.bottom_bound, prefactor=delta_sigma_minus_sigma)
+        self.problem.addenergy(surface_area_air, prefactor=self.sigma)
         self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g)
-        // self.problem.addenergy(adhesion, selection=self.bottom_bound, prefactor=-1*self.deltaSigma)
         self.problem.addconstraint(volume_constraint)
 
         // add constraint that makes all vertices stays at z=0 regulates that so all bounds will stay at z=0
         // local constraint are usually applied for each vertex/edge/face. example in this case,
         // the local constraint tells every vertices at the bound to go to z = 1.
-        var r = 2
-        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) y^2+(z+0.5+r)^2-r^2, fn(x,y,z) Matrix([0,2*y,2*(z+0.5+r)])), selection=self.bottom_bound)
+        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) y^2+(z+0.5+self.r)^2-self.r^2, fn(x,y,z) Matrix([0,2*y,2*(z+0.5+self.r)])), selection=self.bottom_bound)
     }
 
     /* PRIVATE METHOD: declare and set up a regulator for the mesh */
@@ -281,10 +276,11 @@ class WettingExperiment {
 // surface - surface does not do anything, just shows
 var r = 2
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
-var surface_graphic = plotmesh(surface, grade = [0,1,2])
+var surface_graphic = plotmesh(surface, grade = [1,2])
 
 // cube and optimize
-var cube = WettingExperiment(3, 1, 9.8, 1)
+//WettingExperiment(sigma, density, gravity, deltaSigma, radius)
+var cube = WettingExperiment(3, 1, 9.8, 3, r)
 
 var opt = cube.getopt()
 var ropt = cube.getropt() // commented out for checking how it would look without regulator
@@ -299,9 +295,9 @@ for (refiter in 1..refmax) {
     // opt.conjugategradient(10)
     if (refiter < refmax) {
         print "===Refinement level ${refiter}==="
-        opt.relax(130)
         if (refiter == refmax) break
         cube.refine(showEachIter=true)
+        opt.relax(130)
     }
     for (iter in 1..itermax) {
         cube.regularize(iter)
