@@ -104,6 +104,8 @@ class WettingExperiment {
         // Perform the refinement
         // center of the cylinder 00 -r -1/2
         var newbnd=Selection(refmap[self.cube], fn(x,y,z) self.delta_cylinder>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
+        newbnd.addgrade(1)
+        newbnd.addgrade(2)
         self.delta_cylinder = self.delta_cylinder/2
         refmap[self.bottom_bound]=newbnd
 
@@ -134,6 +136,7 @@ class WettingExperiment {
         return self.ropt
     }
 
+    // FIXME: only works on flat surface and droplet
     /*
     A method that calculates and return the contact angle between the bottom and the face of
     the bottom bound lines.
@@ -149,7 +152,7 @@ class WettingExperiment {
         var face = lineToFace.rowindices(line) // find the face it is attached to
         if (face.count()>1) {
             // throw(Error("NotBndLine","This line is connected to more than one face, its not on the boundary"))
-        print "bad line, not on bnd"
+            print "bad line, not on bnd"
         }
         var vertexNum = faceToVertex.rowindices(face[0]) // find the vertices on that face
         var r0 = self.cube.vertexposition(vertexNum[0])
@@ -179,8 +182,10 @@ class WettingExperiment {
     */
     _setupOptimization() {
         self.opt = ShapeOptimizer(self.problem, self.cube)
+        self.opt.quiet = true // makes it so that there are no energy iterations shown
         self.opt.stepsize = 0.001
         self.ropt = ShapeOptimizer(self.regulator, self.cube) 
+        self.ropt.quiet = true
         self.ropt.fix(self.bottom_bound)                
     }
     /*
@@ -218,7 +223,7 @@ class WettingExperiment {
             [4,5,7,6]])
         self.cube.addgrade(1)
         // defines the bottom bound
-        self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.1>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
+        self.bottom_bound = Selection(self.cube, fn(x,y,z) self.delta_cylinder>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
         self.bottom_bound.addgrade(0)
         self.bottom_bound.addgrade(1)
         self.bottom_bound.addgrade(2)
@@ -230,7 +235,7 @@ class WettingExperiment {
         self.problem = OptimizationProblem(self.cube)
         // declare surface tension energy
         var delta_sigma_minus_sigma = self.deltaSigma - self.sigma // should be negative
-        var surface_area_bottom = Area()
+        var surface_area_bottom = Area() 
         var surface_area_air = Area()
         // declare gravity potential energy
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (x[2]^2)/2)
@@ -283,10 +288,10 @@ var surface_graphic = plotmesh(surface, grade = [1,2])
 // cube and optimize
 //WettingExperiment(sigma, density, gravity, deltaSigma, radius)
 var params = [
-    // [7, 0, 9.8, 1, r] // round droplet shape
+    [7, 0, 9.8, 1, r] // round droplet shape
     // [1, 0, 9.8, 0, r] // cube shape
     // [10, 10, 9.8, 4, r] // hot airballoon shape
-    [10, 20, 9,8, 4, r] // still a balloon shape, it could be that the selection is pulling down too much
+    // [10, 20, 9,8, 4, r] // still a balloon shape, it could be that the selection is pulling down too much
 ]
 
 var cube = WettingExperiment(params[0][0], params[0][1], params[0][2], params[0][3], params[0][4])
@@ -298,7 +303,7 @@ var ropt = cube.getropt() // commented out for checking how it would look withou
 
 // notes: is surface tension too high?
 
-var refmax = 4
+var refmax = 5
 var itermax = 1
 opt.relax(100)
 for (refiter in 1..refmax) {
@@ -309,6 +314,7 @@ for (refiter in 1..refmax) {
         if (refiter == refmax) break
         cube.refine(showEachIter=true)
         opt.relax(130)
+        opt.linesearch(10)
     }
     for (iter in 1..itermax) {
         cube.regularize(iter)
@@ -323,3 +329,6 @@ var cube_graphic = plotselection(cube.cube, cube.bottom_bound, grade = [0,1,2])
 
 Show(cube_graphic+surface_graphic)
 // Show(cube_graphic)
+
+
+// EXPLORE ETOL (energy tolerance), make it lower
