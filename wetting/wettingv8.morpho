@@ -4,13 +4,10 @@ import optimize
 /*
 Wetting Experiment class that encapsulate the experiment model.
 states: 
-Expand
-message.txt
-13 KB
-﻿
 import meshtools
 import plot
 import optimize
+*/
 /*
 Wetting Experiment class that encapsulate the experiment model.
 states: 
@@ -234,6 +231,8 @@ class WettingExperiment {
     _declareProblem() {
         // initialize optimization problem
         self.problem = OptimizationProblem(self.cube)
+        var delta_sigma_minus_sigma = self.deltaSigma - self.sigma
+
         // declare surface tension energy
         var surface_area = Area()
         // declare gravity potential energy
@@ -242,10 +241,11 @@ class WettingExperiment {
         var adhesion = Area()
         // declare volume constraint
         var volume_constraint = VolumeEnclosed()
-        
+
         // add all energy and constraint to the problem
-        self.problem.addenergy(surface_area, selection=bottom_bound, prefactor=self.sigma)
-        self.problem.addenergy()
+        self.problem.addenergy(surface_area, selection=self.bottom_bound, prefactor=self.sigma*delta_sigma_minus_sigma)
+        self.problem.addenergy(surface_area, prefactor=self.sigma)
+
         self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g)
         self.problem.addenergy(adhesion, selection=self.bottom_bound, prefactor=-1*self.deltaSigma)
         self.problem.addconstraint(volume_constraint)
@@ -285,7 +285,7 @@ var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, 
 var surface_graphic = plotmesh(surface, grade = [0,1,2])
 
 // cube and optimize
-var cube = WettingExperiment(3, 1, 9.8, 0.1)
+var cube = WettingExperiment(3, 1, 9.8, 5)
 
 var opt = cube.getopt()
 var ropt = cube.getropt() // commented out for checking how it would look without regulator
@@ -317,5 +317,3 @@ var cube_graphic = plotselection(cube.cube, cube.bottom_bound, grade = [0,1,2])
 
 Show(cube_graphic+surface_graphic)
 // Show(cube_graphic)
-message.txt
-13 KB
