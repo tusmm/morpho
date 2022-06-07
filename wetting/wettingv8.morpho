@@ -106,7 +106,7 @@ class WettingExperiment {
         // Perform the refinement
         // center of the cylinder 00 -r -1/2
         var r = 2
-        var newbnd=Selection(refmap[self.cube], fn(x,y,z) 0.0001>abs(((z+r+0.5))^2 + (y)^2)^(1/2)-r)
+        var newbnd=Selection(refmap[self.cube], fn(x,y,z) 0.1>abs(((z+r+0.5))^2 + (y)^2)^(1/2)-r)
         refmap[self.bottom_bound]=newbnd
 
         // Tell any other objects that refer to the mesh, fields or selections to update their references using refmap
@@ -221,7 +221,7 @@ class WettingExperiment {
         self.cube.addgrade(1)
         // defines the bottom bound
         var r = 2
-        self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.0001>abs(((z+r+0.5))^2 + (y)^2)^(1/2)-r)
+        self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.1>abs(((z+r+0.5))^2 + (y)^2)^(1/2)-r)
         self.bottom_bound.addgrade(0)
         self.bottom_bound.addgrade(1)
         self.bottom_bound.addgrade(2)
@@ -231,8 +231,8 @@ class WettingExperiment {
     _declareProblem() {
         // initialize optimization problem
         self.problem = OptimizationProblem(self.cube)
+        // prefactor for bottom bound area calculation
         var delta_sigma_minus_sigma = self.deltaSigma - self.sigma
-
         // declare surface tension energy
         var surface_area = Area()
         // declare gravity potential energy
@@ -245,9 +245,8 @@ class WettingExperiment {
         // add all energy and constraint to the problem
         self.problem.addenergy(surface_area, selection=self.bottom_bound, prefactor=self.sigma*delta_sigma_minus_sigma)
         self.problem.addenergy(surface_area, prefactor=self.sigma)
-
         self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g)
-        self.problem.addenergy(adhesion, selection=self.bottom_bound, prefactor=-1*self.deltaSigma)
+        // self.problem.addenergy(adhesion, selection=self.bottom_bound, prefactor=-1*self.deltaSigma)
         self.problem.addconstraint(volume_constraint)
 
         // add constraint that makes all vertices stays at z=0 regulates that so all bounds will stay at z=0
@@ -285,7 +284,7 @@ var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, 
 var surface_graphic = plotmesh(surface, grade = [0,1,2])
 
 // cube and optimize
-var cube = WettingExperiment(3, 1, 9.8, 5)
+var cube = WettingExperiment(3, 1, 9.8, 1)
 
 var opt = cube.getopt()
 var ropt = cube.getropt() // commented out for checking how it would look without regulator
