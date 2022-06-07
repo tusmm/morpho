@@ -1,5 +1,5 @@
-# morpho
-## https://github.com/Morpho-lang/morpho
-### version control for morpho practice
-##### information for morpho can be found on above github link
-## test
+# wetting problem
+
+## https://en.wikipedia.org/wiki/Wetting
+
+### contains version control for simulating and optimizing the wetting phenomena in morpho
