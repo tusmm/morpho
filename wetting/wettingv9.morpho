@@ -305,12 +305,14 @@ for (conf in configs) {
 
     // cube.show(highlightBound=true)
 
-    var refmax = 4 // for refinement and relaxation
-    var itermax = 10 // for regularization
+    var refmax = 3 // for refinement and relaxation
+    var itermax = 6 // for regularization
     var relaxCount = 100
+    opt.relax(10)
 
     for (refiter in 1..refmax) {
         //cube.printGradients()
+        
         if (refiter < refmax) {
             print "===Refinement level ${refiter}==="
             opt.relax(relaxCount)
@@ -320,14 +322,15 @@ for (conf in configs) {
             relaxCount = relaxCount * 3
         }
 
-        opt.relax(100)
-
         for (iter in 1..itermax) {
             cube.regularize(iter)
             // cube.printGradients()
         }
     }
 
+
+    opt.conjugategradient(1000) // optional lines
+    opt.linesearch(1000) // optional lines
 
     // cube.show(highlightBound=true)
     // print cube.contactAngle()
