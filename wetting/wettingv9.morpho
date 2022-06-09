@@ -319,7 +319,7 @@ for (conf in configs) {
             if (refiter == refmax) break
             cube.refine(showEachIter=false)
             opt.stepsize = opt.stepsize/1.5 // maybe divide this even further
-            relaxCount = relaxCount * 3
+            // relaxCount = relaxCount * 3
         }
 
         for (iter in 1..itermax) {
@@ -328,8 +328,7 @@ for (conf in configs) {
         }
     }
 
-
-    opt.conjugategradient(1000) // optional lines
+    opt.conjugategradient(1200) // optional lines
     opt.linesearch(1000) // optional lines
 
     // cube.show(highlightBound=true)
