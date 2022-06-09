@@ -183,7 +183,7 @@ class WettingExperiment {
     */
     _setupOptimization() {
         self.opt = ShapeOptimizer(self.problem, self.cube)
-        self.opt.stepsize = 0.01
+        self.opt.stepsize = 0.001
         self.ropt = ShapeOptimizer(self.regulator, self.cube) 
         self.ropt.fix(self.bottom_bound)                
     }
@@ -305,17 +305,22 @@ for (conf in configs) {
 
     // cube.show(highlightBound=true)
 
-    var refmax = 1
-    var itermax = 1
-    opt.relax(20)
+    var refmax = 3 // for refinement and relaxation
+    var itermax = 5 // for regularization
+    var relaxCount = 100
+    opt.relax(10)
+
     for (refiter in 1..refmax) {
         //cube.printGradients()
         if (refiter < refmax) {
             print "===Refinement level ${refiter}==="
-            opt.relax(20)
+            // opt.relax(relaxCount)
             if (refiter == refmax) break
             cube.refine(showEachIter=false)
+            opt.stepsize = opt.stepsize/2
+            relaxCount = relaxCount * 2
         }
+        opt.relax(100)
         for (iter in 1..itermax) {
             cube.regularize(iter)
             // cube.printGradients()
