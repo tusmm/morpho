@@ -292,6 +292,7 @@ var params = [
     // [1, 0, 9.8, 0, r] // cube shape
     // [10, 10, 9.8, 4, r] // hot airballoon shape
     // [10, 20, 9,8, 4, r] // still a balloon shape, it could be that the selection is pulling down too much
+    // [3, 0, 9.8, 1, r]
 ]
 
 var cube = WettingExperiment(params[0][0], params[0][1], params[0][2], params[0][3], params[0][4])
