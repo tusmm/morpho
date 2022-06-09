@@ -40,7 +40,7 @@ class WettingExperiment {
         self.g = g
         self.deltaSigma = deltaSigma
         self.r = r
-        self.delta_cylinder = 0.1
+        self.delta_cylinder = 0.01
         self._makeCubeMesh()
         self._declareProblem()
         self._declareRegulator() // commented out for checking how it would look without regulator
@@ -108,7 +108,7 @@ class WettingExperiment {
         var newbnd=Selection(refmap[self.cube], fn(x,y,z) self.delta_cylinder>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
         newbnd.addgrade(1)
         newbnd.addgrade(2)
-        self.delta_cylinder = self.delta_cylinder/2
+        self.delta_cylinder = self.delta_cylinder/3
         refmap[self.bottom_bound]=newbnd
 
         // Tell any other objects that refer to the mesh, fields or selections to update their references using refmap
@@ -305,22 +305,22 @@ for (conf in configs) {
 
     // cube.show(highlightBound=true)
 
-    var refmax = 3 // for refinement and relaxation
-    var itermax = 5 // for regularization
+    var refmax = 4 // for refinement and relaxation
+    var itermax = 10 // for regularization
     var relaxCount = 100
-    opt.relax(10)
+    
 
     for (refiter in 1..refmax) {
         //cube.printGradients()
         if (refiter < refmax) {
             print "===Refinement level ${refiter}==="
-            // opt.relax(relaxCount)
+            opt.relax(relaxCount)
             if (refiter == refmax) break
             cube.refine(showEachIter=false)
-            opt.stepsize = opt.stepsize/2
-            relaxCount = relaxCount * 2
+            opt.stepsize = opt.stepsize/1.5 // maybe divide this even further
+            relaxCount = relaxCount * 3
         }
-        opt.relax(100)
+
         for (iter in 1..itermax) {
             cube.regularize(iter)
             // cube.printGradients()
