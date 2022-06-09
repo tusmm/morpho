@@ -265,7 +265,7 @@ class WettingExperiment {
 
     }
 
-    /* For debug usage, this method prints out all the gradienst in the problem */
+    /* For debug usage, this method prints out all the gradients in the problem */
     printGradients() {
         print "\n energy gradients"
         for (el in self.problem.energies) print self.opt.gradient(el)
@@ -279,7 +279,7 @@ class WettingExperiment {
 
 // main
 // surface - surface does not do anything, just shows
-var r = 0.5
+var r = 1
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
 var surface_graphic = plotmesh(surface, grade = [1,2])
 
@@ -308,7 +308,6 @@ for (conf in configs) {
     var refmax = 4 // for refinement and relaxation
     var itermax = 10 // for regularization
     var relaxCount = 100
-    
 
     for (refiter in 1..refmax) {
         //cube.printGradients()
@@ -321,11 +320,14 @@ for (conf in configs) {
             relaxCount = relaxCount * 3
         }
 
+        opt.relax(100)
+
         for (iter in 1..itermax) {
             cube.regularize(iter)
             // cube.printGradients()
         }
     }
+
 
     // cube.show(highlightBound=true)
     // print cube.contactAngle()
