@@ -279,7 +279,7 @@ class WettingExperiment {
 
 // main
 // surface - surface does not do anything, just shows
-var r = 1
+var r = 0.5
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
 var surface_graphic = plotmesh(surface, grade = [1,2])
 
@@ -297,6 +297,9 @@ for (conf in configs) {
     // cube and optimize
     //WettingExperiment(sigma, density, gravity, deltaSigma, radius)
     var cube = WettingExperiment(conf[0], conf[1], conf[2], conf[3], r)
+    var test = cube.cube
+    test.addgrade(1)
+    Show(plotmesh(cube.cube) + surface_graphic)
 
     var opt = cube.getopt()
     opt.quiet=false
