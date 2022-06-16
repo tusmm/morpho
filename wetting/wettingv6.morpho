@@ -222,7 +222,7 @@ class WettingExperiment {
     the bottom bound lines.
         @return contactAngle: Double        // the contact angle between surface and the droplet
     */
-    contactAngle() {
+        contactAngle() {
         var bndLines = self.bottom_bound.idlistforgrade(1)
         var lineToFace = self.cube.connectivitymatrix(2,1)
         var faceToVertex = self.cube.connectivitymatrix(0,2)
@@ -230,9 +230,9 @@ class WettingExperiment {
 
         for (line in bndLines) { // for each line in the boundary
             var face = lineToFace.rowindices(line) // find the face it is attached to
-        if (face.count()>1) {
-            // throw(Error("NotBndLine","This line is connected to more than one face, its not on the boundary"))
-        print "bad line, not on bnd"
+            if (face.count()>1) {
+                // throw(Error("NotBndLine","This line is connected to more than one face, its not on the boundary"))
+            print "bad line, not on bnd"
         }
         var vertexNum = faceToVertex.rowindices(face[0]) // find the vertices on that face
         var r0 = self.cube.vertexposition(vertexNum[0])
@@ -244,7 +244,7 @@ class WettingExperiment {
         if (abs(r0[2]) < 1e-4) boundrypts.append(r0) else notboundrypt = r0
         if (abs(r1[2]) < 1e-4) boundrypts.append(r1) else notboundrypt = r1
         if (abs(r2[2]) < 1e-4) boundrypts.append(r2) else notboundrypt = r2
-        var midpt = (boundrypts[0]+boundrypts[1])/2
+        var midpt = (boundrypts[0]+boundrypts[1]) / 2
 
         var contactVector = notboundrypt - midpt;
 
@@ -284,8 +284,8 @@ class WettingExperiment {
         self.regulator.addenergy(EquiElement())         
     //     // add constraint that makes all vertices stays at z=0 regulates that so all bounds will stay at z=0
     //     self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z, fn(x,y,z) Matrix([0,0,1])), selection=self.bottom_bound)
-    self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z, fn (x,y,z) Matrix([x,y,z])), selection=self.bottom_bound)
-
+        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z, fn (x,y,z) Matrix([x,y,z])), selection=self.bottom_bound)
+        //self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z, fn(x,y,z) Matrix([0,0,1])), selection=self.bottom_bound)
     }
 }
 
@@ -294,8 +294,8 @@ var cube = WettingExperiment(4, 1, 9.8, -3)
 var opt = cube.getopt()
 var ropt = cube.getropt()
 
-var refmax = 4
-var itermax = 1
+var refmax = 3
+var itermax = 2
 opt.relax(20)
 for (refiter in 1..refmax) {
     for (iter in 1..itermax) {

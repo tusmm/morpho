@@ -177,7 +177,7 @@ class WettingExperiment {
             // the contactvector is a vector
             // contactVector[0] == x
             // arctam returns the angle between these two arguments
-            contactangle += arctan(-sqrt(contactVector[0]^2+contactVector[1]^2),abs(contactVector[2]))/bndLines.count()
+            contactangle += arctan(-sqrt(contactVector[0]^2+contactVector[1]^2),abs(contactVector[2])) / bndLines.count()
         }
         
         return contactangle / Pi*180
