@@ -118,7 +118,9 @@ for (refiter in 1..refmax) {
             lcon.selection = bnd
         }
     }*/
-    var mid = plotmesh(cube, grade=[0,1,2])
+    var ground=Selection(cube, fn (x,y,z) z<=0.0005)
+    ground.addgrade(1)
+    var mid = plotselection(cube, ground, grade=[1,2])
     mid.title = "Mid"
     Show(mid)
 }
