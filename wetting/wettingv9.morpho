@@ -237,7 +237,7 @@ class WettingExperiment {
         var surface_area_bottom = Area()
         var surface_area_air = Area()
         // declare gravity potential energy
-        var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (x[2]^2)/2)
+        var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * x[2]^2)
         // declare adhesion
         var adhesion = Area()
         // declare volume constraint
@@ -289,7 +289,7 @@ var configs = [
     // [3,0,9.8,4]  // does not change on r = 2 nor 0.5
     // [3,1,9.8,10],   // does not goes into the pipe
     //[3,0,9.8,0.1]    // only one vertex stick to the cylinder, diamond shape
-    [3,0,9.8,-1]    // only one vertex stick to the cylinder, diamond shape
+    [3,1,9.8,-1]    // only one vertex stick to the cylinder, diamond shape
    // [3,0,9.8,10]
     ]
 
@@ -297,9 +297,6 @@ for (conf in configs) {
     // cube and optimize
     //WettingExperiment(sigma, density, gravity, deltaSigma, radius)
     var cube = WettingExperiment(conf[0], conf[1], conf[2], conf[3], r)
-    var test = cube.cube
-    test.addgrade(1)
-    Show(plotmesh(cube.cube) + surface_graphic)
 
     var opt = cube.getopt()
     opt.quiet=false
@@ -309,7 +306,7 @@ for (conf in configs) {
     // cube.show(highlightBound=true)
 
     var refmax = 3 // for refinement and relaxation
-    var itermax = 6 // for regularization
+    var itermax = 2 // for regularization
     var relaxCount = 100
     opt.relax(10)
 
@@ -322,7 +319,7 @@ for (conf in configs) {
             if (refiter == refmax) break
             cube.refine(showEachIter=false)
             opt.stepsize = opt.stepsize/1.5 // maybe divide this even further
-            // relaxCount = relaxCount * 3
+            relaxCount = relaxCount * 3
         }
 
         for (iter in 1..itermax) {
@@ -331,8 +328,9 @@ for (conf in configs) {
         }
     }
 
-    opt.conjugategradient(1200) // optional lines
-    opt.linesearch(1000) // optional lines
+    // opt.conjugategradient(1200) // optional lines
+    // opt.linesearch(1000) // optional lines
+    opt.relax(1000)
 
     // cube.show(highlightBound=true)
     // print cube.contactAngle()

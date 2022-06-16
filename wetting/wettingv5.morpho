@@ -101,7 +101,7 @@ class WettingExperiment {
         opt.stepsize = 0.001
         var ropt = ShapeOptimizer(self.regulator, self.cube)
         ropt.fix(self.bottom_bound)
-
+        opt.relax(100)
         for (refiter in 1..self.refmax) {
             for (i in 1..refiter) {
                 if (refiter < self.refmax) {//regularize
@@ -110,7 +110,7 @@ class WettingExperiment {
                     ropt.linesearch(2)
                     equiangulate(self.cube)
                 }
-                opt.relax(100)
+                
                 opt.conjugategradient(50)
             }
 
@@ -267,10 +267,13 @@ class WettingExperiment {
 /*
  * droplet on cylinderical shell
  */
-var wetting = WettingExperiment(4, 0, 9.8, -1, 0)
+
+var wetting = WettingExperiment(4, 1, 9.8, -1, 4)
 
 var cube = wetting.cube
-var cylinder = AreaMesh(fn (u, v) [v, cos(u), sin(u) - 1], -Pi...Pi:Pi/16, -1..1:0.1, closed=[true, false])
+var ground=Selection(cube, fn (x,y,z) z<=0.0005)
+Show(plotselection(cube, ground, grade=[0,1,2]))
+// var cylinder = AreaMesh(fn (u, v) [v, cos(u), sin(u) - 1], -Pi...Pi:Pi/16, -1..1:0.1, closed=[true, false])
 
 wetting.optimize()
 
