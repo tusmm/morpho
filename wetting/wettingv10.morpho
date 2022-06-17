@@ -255,6 +255,7 @@ class WettingExperiment {
 // main
 // surface - surface does not do anything, just shows
 
+// "sigma=${self.sigma}; rho=${self.rho}; g=${self.g}; deltaSigma=${self.deltaSigma}"
 var configs = [
     // [3,0,9.8,1], // does not change on r = 2 nor 0.5
     // [3,1,9.8,1], // does not change on r = 2 nor 0.5
