@@ -56,7 +56,7 @@ class WettingExperiment {
         // if high light bound is true, we highlight the bottom bound by default. highlight specified other wise
         if (highlightBound) {
             if (!bound) {bound = self.bottom_bound}
-            graphic = plotselection(self.cube, bound, grade=[2])
+            graphic = plotselection(self.cube, bound, grade=[0,1,2])
         }
         else {
             graphic = plotmesh(self.cube, grade=[0,1,2])
@@ -216,7 +216,7 @@ class WettingExperiment {
             [4,5,7,6]])
         self.cube.addgrade(1)
         // defines the bottom bound
-        self.bottom_bound = Selection(self.cube,fn (x,y,z) abs(z+0.5)<1e-2)
+        self.bottom_bound = Selection(self.cube,fn (x,y,z) z < (-0.5 + 1e-10))
         self.bottom_bound.addgrade(0)
         self.bottom_bound.addgrade(1)
         self.bottom_bound.addgrade(2)
@@ -252,7 +252,7 @@ class WettingExperiment {
         // add Equi Element energy to the regulator 
         self.regulator.addenergy(EquiElement())        
         // add constraint that makes all vertices stays at z=-0.5 regulates that so all bounds will stay at z=0
-        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z-0.5, fn(x,y,z) Matrix([0,0,1])), selection=self.bottom_bound)
+        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z+0.5, fn(x,y,z) Matrix([0,0,1])), selection=self.bottom_bound)
     }
 }
 
@@ -283,10 +283,10 @@ var ropt = cube.getropt() // commented out for checking how it would look withou
 
 // cube.show(highlightBound=true)
 
-var refmax = 4 // for refinement and relaxation
+var refmax = 3 // for refinement and relaxation
 var itermax = 2 // for regularization
 var relaxCount = 100
-opt.relax(100)
+opt.relax(10)
 
 for (refiter in 1..refmax) {
     //cube.printGradients()
@@ -300,21 +300,24 @@ for (refiter in 1..refmax) {
         relaxCount = relaxCount * 3
     }
 
+    var ground=Selection(cube.cube, fn (x,y,z) z<=-0.5 + 1e-8)
+    ground.addgrade(0)
+    ground.addgrade(1)
+    ground.addgrade(2)
+
     for (iter in 1..itermax) {
         cube.regularize(iter)
         // cube.printGradients()
     }
+    Show(plotselection(cube.cube, ground, grade=[0,1,2]))
 }
 
 // opt.conjugategradient(1200) // optional lines
 // opt.linesearch(1000) // optional lines
-opt.relax(1000)
+// opt.relax(1000)
 
 // cube.show(highlightBound=true)
 print cube.contactAngle()
-
-var ground=Selection(cube.cube, fn (x,y,z) z<=0.0005)
-ground.addgrade(1)
 
 
 cube.show(highlightBound=true)

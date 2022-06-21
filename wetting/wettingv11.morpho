@@ -3,52 +3,52 @@ import functionals
 import meshtools
 import optimize
 import plot
-​
+
 class Surface {
-​
+
     getPinningFunctional(){
         return ScalarPotential(self.getEnergy,self.getGradE)
     }
     getTitle() { return "${self.name}"}
 }
 class PlanarSurface is Surface{
-​
+
     init(n = nil, point = nil) {
         if (isnil(n)) self.normal = Matrix([0,0,1])
         else self.normal = n
-​
+
         if (isnil(point)) self.point = Matrix([0,0,-0.5])
         else self.point = point
-​
+
         self.name = "Plane"
     }
     getEnergy(x,y,z) {return self.normal.inner(Matrix([x,y,z])-self.point)}
     getGradE(x,y,z) {return self.normal}
-​
+
 }
-​
+
 class CylendricalSurface is Surface {
     init(r, top){
         self.r = r
         self.center = Matrix([0,0,top-r])
-        self.name = "Cylender r = ${self.r}"
     }
     getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2}
     getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])])}
-​
+    getTitle(){return "Cylender r = ${self.r}"}
+
 }
-​
+
 class SphericalSurface is Surface {
     init(r,center){
         self.r = r
         self.center = center
-        self.name = "Sphere r = ${self.r}"
     }
-    getEnergy(x,y,z) { return (x-self.center[0])^2+(y-self.center[1])^2 +(z-self.center[2])^2-self.r^2 }
-    getGradE(x,y,z) { return Matrix([2*(x-self.center[0]),2*(y-self.center[1]),2*(z-self.center[2])])}
-​
+    getEnergy(x,y,z) { return sqrt((x-self.center[0])^2+(y-self.center[1])^2 +(z-self.center[2])^2-self.r^2) }
+    getGradE(x,y,z) { return Matrix([2*x,2*y,2*z])}
+    getTitle(){return "Sphere r = ${self.r}"}
+
 }
-​
+
 class MeshLibrary{
     cube(length, center) {
         var cube = PolyhedronMesh(
@@ -82,16 +82,16 @@ class Minimizer {
                     print "relaxing ${step[1]}" 
                     self.experiment.getOpt().relax(step[1])
             } else if (step[0]=="refine") {
-                    self.experiment.show()
-​
+                    // self.experiment.show()
+
                     print("refining")
                     self.refine()
-                    self.experiment.show()
-​
+                    // self.experiment.show()
+
             } else if (step[0] == "reguarlize") {
                     print("reguarlizing")
-                    self.experiment.getRegualrizer.relax(step[1])
-                    self.experiment.getMesh.equiangulate()
+                    self.experiment.getRegualrizer().linesearch(step[1])
+                    equiangulate(self.experiment.getMesh())
             }
         }
     }
@@ -100,36 +100,33 @@ class Minimizer {
         var refmap=mr.refine()
         self.experiment.updateFromRefmap(refmap)
     }
-​
+
 }
-​
-​
+
+
 class WettingExperiment {
     init(sigma, deltaSigma, surface) {
         self.sigma = sigma
         self.deltaSigma = deltaSigma
         self.surface = surface
-​
+
         var myLibrary = MeshLibrary()
         self.mesh = myLibrary.cube(1,Matrix([0,0,0])) // makes a cube with side length one cenered at 0,0,0
         
-        self.minimizationProcedure = [["relax",1000],["refine"],["relax",100000],["refine"],["relax",100000]]
-​
+        self.minimizationProcedure = [["relax",10000],["refine"],["relax",1000],["refine"],["relax",1000]]
+
     }
     createSelection() {
         var sel = Selection(self.mesh,fn(x,y,z) abs(self.surface.getEnergy(x,y,z))<self.bottomTolerence)
         sel.addgrade(1)
         sel.addgrade(2)
         return sel
-​
+
     }
     setupProblem(){
         self.problem = OptimizationProblem(self.mesh)
-        self.bottomTolerence = 5e-1
-​
-        self.bottomBound = Selection(self.mesh,fn (x,y,z) abs(z+0.5)<1e-2)// grab the bottom of the cube
-        self.bottomBound.addgrade(1)
-        self.bottomBound.addgrade(2)
+        self.bottomTolerence = 0.01
+        self.bottomBound = self.createSelection()
         //Air water interface
         self.problem.addenergy(Area(),prefactor = self.sigma)
         //Water Surface Interface
@@ -142,15 +139,15 @@ class WettingExperiment {
         self.opt = ShapeOptimizer(self.problem,self.mesh)
         self.opt.stepsize = 1e-3
         self.opt.quiet = true
-​
-​
+
+
         self.regproblem = OptimizationProblem(self.mesh)
         self.regproblem.addenergy(EquiElement())
         self.regproblem.addlocalconstraint(self.surface.getPinningFunctional(),selection = self.bottomBound)
         self.regproblem.addconstraint(VolumeEnclosed())
         self.ropt = ShapeOptimizer(self.regproblem,self.mesh)
         self.ropt.quiet = true
-​
+
     }
     minimize(){
         self.myMinimizer = Minimizer(self)
@@ -167,7 +164,7 @@ class WettingExperiment {
         self.mesh = refmap[self.mesh]
         var newbnd=self.createSelection()
         refmap[self.bottomBound]=newbnd
-​
+
         // Tell any other objects that refer to the mesh, fields or selections to update their references using refmap
         for (el in [self.problem, self.opt]) el.update(refmap) // Update the problem
         for (el in [self.regproblem, self.ropt]) el.update(refmap) // Update the problem
@@ -205,10 +202,75 @@ class WettingExperiment {
     getTitle() {
         return "sigma=${self.sigma}; deltaSigma=${self.deltaSigma};" + self.surface.getTitle()
     }
-​
-​
+
+    /*
+    PRIVATE METHOD: gets the cross product
+        @param a: Matrix    // Matrix A
+        @param b: Matrix    // Matrix B
+        @return cross(): function // returns a packed function of matrix
+    */
+    _getCross(a, b) {
+        fn cross(a, b) {
+            return Matrix([ a[1]*b[2]-a[2]*b[1],
+                            a[2]*b[0]-a[0]*b[2],
+                            a[0]*b[1]-a[1]*b[0] ])
+        }
+        return cross(a, b)
+    }
+
+    /*
+    A method that calculates and return the contact angle between the bottom and the face of
+    the bottom bound lines.
+        @return contactAngle: Double        // the contact angle between surface and the droplet
+    */
+    getContactAngle() {
+        var bndLines = self.bottomBound.idlistforgrade(1)
+        var boundFaces = self.bottomBound.idlistforgrade(2)
+        var boundVertices = self.bottomBound.idlistforgrade(0)
+        var lineToFace = self.mesh.connectivitymatrix(2,1)
+        var faceToVertex = self.mesh.connectivitymatrix(0,2)
+        var contactangle = 0
+        var contactFaces = []
+        var contactAngles = []
+        for (line in bndLines) { // for each line in the boundary
+            var faces = lineToFace.rowindices(line) // find the face it is attached to
+            for (face in faces) {
+                if (!boundFaces.ismember(face) && !contactFaces.ismember(face)) {
+                    contactFaces.append(face)
+                }
+            }
+        }
+
+        for (face in contactFaces) {
+            var vertexNum = faceToVertex.rowindices(face) // find the vertices on that face
+            var pTop
+            var pSurface = []
+            for (vertex in vertexNum) {
+                if (boundVertices.ismember(vertex)) { 
+                    pSurface.append(vertex)
+                }
+                else {
+                    pTop = vertex
+                }
+            } 
+            var pMid = (1/2)*(self.mesh.vertexposition(pSurface[0]) + self.mesh.vertexposition(pSurface[1]))
+            var vFaceTangent = self.mesh.vertexposition(pTop) - pMid
+            var vRad = Matrix([0, 0, 1])
+            var vedge = (self.mesh.vertexposition(pSurface[0]) - self.mesh.vertexposition(pSurface[1]))
+            var vSurfaceTangent = self._getCross(vedge, vRad)
+            var vContactRadius = pMid - Matrix([0, 0, -0.5]) 
+            if (vSurfaceTangent.inner(vContactRadius) < 0) {
+                vSurfaceTangent = -vSurfaceTangent
+            }
+            var contactRadian = Pi - acos(vFaceTangent.inner(vSurfaceTangent)/(vFaceTangent.norm()*vSurfaceTangent.norm()))
+            var contactDegree = contactRadian/Pi*180
+            contactAngles.append(contactDegree)
+            contactangle += contactDegree/contactFaces.count()
+        }
+        return [contactAngles, contactangle]
+      }
 }
-​
+
 class ExpermentManager {
     exp1() {
         var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
@@ -217,8 +279,29 @@ class ExpermentManager {
         myDroplet.minimize()
         myDroplet.show(highlightBound = true)
     }
-​
+    exp2() {
+        var myDroplet = WettingExperiment(1,0.5,CylendricalSurface(1,-0.5))
+        myDroplet.setupProblem()
+        myDroplet.show(highlightBound = true)
+        myDroplet.minimize()
+        myDroplet.show(highlightBound = true)
+    }
+    exp3() {
+        var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
+        myDroplet.minimizationProcedure = [["relax",1000],["refine"], ["reguarlize", 2],
+                                            ["relax",2000],["refine"], ["reguarlize", 2],
+                                            ["relax",2000],["refine"], ["reguarlize", 2],
+                                            ["relax",2000]]
+        myDroplet.setupProblem()
+        // myDroplet.show(highlightBound = true)
+        // myDroplet.minimize()
+        // myDroplet.show(highlightBound = true)
+        Show(plotmesh(myDroplet.getMesh()))
+        var angle = myDroplet.getContactAngle()
+        print angle[0]
+        print angle[1]
+    }
 }
-​
+
 var myExp = ExpermentManager()
-myExp.exp1()
+myExp.exp3()
