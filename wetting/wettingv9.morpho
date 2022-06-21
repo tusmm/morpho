@@ -150,10 +150,10 @@ class WettingExperiment {
         var contactangle = 0
 
         for (line in bndLines) { // for each line in the boundary
-        var face = lineToFace.rowindices(line) // find the face it is attached to
-        if (face.count()>1) {
-            // throw(Error("NotBndLine","This line is connected to more than one face, its not on the boundary"))
-        print "bad line, not on bnd"
+            var face = lineToFace.rowindices(line) // find the face it is attached to
+            if (face.count()>1) {
+                // throw(Error("NotBndLine","This line is connected to more than one face, its not on the boundary"))
+            print "bad line, not on bnd"
         }
         var vertexNum = faceToVertex.rowindices(face[0]) // find the vertices on that face
         var r0 = self.cube.vertexposition(vertexNum[0])
@@ -238,8 +238,7 @@ class WettingExperiment {
         var surface_area_air = Area()
         // declare gravity potential energy
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * ((x[2]-((self.r^2-x[1]^2)^(0.5)-1/2-self.r))^2)/2)
-        // declare adhesion
-        var adhesion = Area()
+        
         // declare volume constraint
         var volume_constraint = VolumeEnclosed()
         
@@ -279,7 +278,7 @@ class WettingExperiment {
 
 // main
 // surface - surface does not do anything, just shows
-var r = 2
+var r = 100000
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
 var surface_graphic = plotmesh(surface, grade = [1,2])
 

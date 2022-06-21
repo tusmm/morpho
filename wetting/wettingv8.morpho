@@ -282,7 +282,7 @@ class WettingExperiment {
 
 // main
 // surface - surface does not do anything, just shows
-var r = 1
+var r = 10000000
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
 var surface_graphic = plotmesh(surface, grade = [1,2])
 
