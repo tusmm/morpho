@@ -290,11 +290,11 @@ class WettingExperiment {
 }
 
 // main
-var cube = WettingExperiment(4, 1, 9.8, -3)
+var cube = WettingExperiment(4, 1, 9.8, 1)
 var opt = cube.getopt()
 var ropt = cube.getropt()
 
-var refmax = 3
+var refmax = 4
 var itermax = 2
 opt.relax(20)
 for (refiter in 1..refmax) {
@@ -311,5 +311,4 @@ for (refiter in 1..refmax) {
 }
 
 cube.show(highlightBound=true)
-print cube.contactAngle()
 

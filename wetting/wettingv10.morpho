@@ -216,7 +216,7 @@ class WettingExperiment {
             [4,5,7,6]])
         self.cube.addgrade(1)
         // defines the bottom bound
-        self.bottom_bound = Selection(self.cube, fn(x,y,z) 1e-8 > z, boundary=true)
+        self.bottom_bound = Selection(self.cube,fn (x,y,z) abs(z+0.5)<1e-2)
         self.bottom_bound.addgrade(0)
         self.bottom_bound.addgrade(1)
         self.bottom_bound.addgrade(2)
@@ -235,13 +235,13 @@ class WettingExperiment {
         
         // declare volume constraint
         var volume_constraint = VolumeEnclosed()
+        self.problem.addconstraint(volume_constraint)
         
         // add all energy and constraint to the problem
         self.problem.addenergy(surface_area_bottom, selection=self.bottom_bound, prefactor=deltaSigma_minus_sigma)
         self.problem.addenergy(surface_area_air, prefactor=self.sigma)
 
         self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g)
-        self.problem.addconstraint(volume_constraint)
         
     }
 
@@ -251,8 +251,8 @@ class WettingExperiment {
         self.regulator = OptimizationProblem(self.cube)
         // add Equi Element energy to the regulator 
         self.regulator.addenergy(EquiElement())        
-        // add constraint that makes all vertices stays at z=0 regulates that so all bounds will stay at z=0
-        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z, fn(x,y,z) Matrix([0,0,1])), selection=self.bottom_bound)
+        // add constraint that makes all vertices stays at z=-0.5 regulates that so all bounds will stay at z=0
+        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) z-0.5, fn(x,y,z) Matrix([0,0,1])), selection=self.bottom_bound)
     }
 }
 
@@ -262,7 +262,7 @@ class WettingExperiment {
 // self.sigma, self.rho, self.g, self.deltaSigma
 // suface tension, density, gravity, surface adhesion
 var configs = [
-    [1,1,9.8,1]
+    [3,1,9.8,1]
     // [5,1,9.8,6] // p1
     // [72.75,1,9.8,0.00001], // p2
     // [72.75,1,9.8,0] // p2neg
@@ -275,47 +275,48 @@ for (conf in configs) {
     //WettingExperiment(sigma, density, gravity, deltaSigma, radius)
     cube = WettingExperiment(conf[0], conf[1], conf[2], conf[3])
 }
-    var opt = cube.getopt()
-    opt.quiet=false
-    opt.ctol = 1e-8
-    var ropt = cube.getropt() // commented out for checking how it would look without regulator
 
-    // cube.show(highlightBound=true)
+var opt = cube.getopt()
+opt.quiet=false
+opt.ctol = 1e-8
+var ropt = cube.getropt() // commented out for checking how it would look without regulator
 
-    var refmax = 3 // for refinement and relaxation
-    var itermax = 2 // for regularization
-    var relaxCount = 100
-    opt.relax(10)
+// cube.show(highlightBound=true)
 
-    for (refiter in 1..refmax) {
-        //cube.printGradients()
-        
-        if (refiter < refmax) {
-            print "===Refinement level ${refiter}==="
-            opt.relax(relaxCount)
-            if (refiter == refmax) break
-            cube.refine(showEachIter=false)
-            opt.stepsize = opt.stepsize/1.5 // maybe divide this even further
-            relaxCount = relaxCount * 3
-        }
+var refmax = 4 // for refinement and relaxation
+var itermax = 2 // for regularization
+var relaxCount = 100
+opt.relax(100)
 
-        for (iter in 1..itermax) {
-            cube.regularize(iter)
-            // cube.printGradients()
-        }
+for (refiter in 1..refmax) {
+    //cube.printGradients()
+    
+    if (refiter < refmax) {
+        print "===Refinement level ${refiter}==="
+        opt.relax(relaxCount)
+        if (refiter == refmax) break
+        cube.refine(showEachIter=false)
+        opt.stepsize = opt.stepsize/1.3 // maybe divide this even further
+        relaxCount = relaxCount * 3
     }
 
-    // opt.conjugategradient(1200) // optional lines
-    // opt.linesearch(1000) // optional lines
-    opt.relax(1000)
+    for (iter in 1..itermax) {
+        cube.regularize(iter)
+        // cube.printGradients()
+    }
+}
 
-    // cube.show(highlightBound=true)
-    print cube.contactAngle()
-   
-    var ground=Selection(cube.cube, fn (x,y,z) z<=0.0005)
-    ground.addgrade(1)
+// opt.conjugategradient(1200) // optional lines
+// opt.linesearch(1000) // optional lines
+opt.relax(1000)
+
+// cube.show(highlightBound=true)
+print cube.contactAngle()
+
+var ground=Selection(cube.cube, fn (x,y,z) z<=0.0005)
+ground.addgrade(1)
 
 
-    cube.show(highlightBound=true)
+cube.show(highlightBound=true)
 
-    // gravity is not pushing down on all points towards the surface of the cylinder
+// gravity is not pushing down on all points towards the surface of the cylinder

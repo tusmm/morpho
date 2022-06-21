@@ -1,0 +1,224 @@
+//surfaces.morpho
+import functionals
+import meshtools
+import optimize
+import plot
+​
+class Surface {
+​
+    getPinningFunctional(){
+        return ScalarPotential(self.getEnergy,self.getGradE)
+    }
+    getTitle() { return "${self.name}"}
+}
+class PlanarSurface is Surface{
+​
+    init(n = nil, point = nil) {
+        if (isnil(n)) self.normal = Matrix([0,0,1])
+        else self.normal = n
+​
+        if (isnil(point)) self.point = Matrix([0,0,-0.5])
+        else self.point = point
+​
+        self.name = "Plane"
+    }
+    getEnergy(x,y,z) {return self.normal.inner(Matrix([x,y,z])-self.point)}
+    getGradE(x,y,z) {return self.normal}
+​
+}
+​
+class CylendricalSurface is Surface {
+    init(r, top){
+        self.r = r
+        self.center = Matrix([0,0,top-r])
+        self.name = "Cylender r = ${self.r}"
+    }
+    getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2}
+    getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])])}
+​
+}
+​
+class SphericalSurface is Surface {
+    init(r,center){
+        self.r = r
+        self.center = center
+        self.name = "Sphere r = ${self.r}"
+    }
+    getEnergy(x,y,z) { return (x-self.center[0])^2+(y-self.center[1])^2 +(z-self.center[2])^2-self.r^2 }
+    getGradE(x,y,z) { return Matrix([2*(x-self.center[0]),2*(y-self.center[1]),2*(z-self.center[2])])}
+​
+}
+​
+class MeshLibrary{
+    cube(length, center) {
+        var cube = PolyhedronMesh(
+            [[-0.5,-0.5,-0.5],
+            [-0.5,0.5,-0.5],
+            [0.5,-0.5,-0.5],
+            [0.5,0.5,-0.5],
+            [-0.5,-0.5,0.5],
+            [-0.5,0.5,0.5],
+            [0.5,-0.5,0.5],
+            [0.5,0.5,0.5]],
+            [
+            [0,1,3,2],
+            [0,1,5,4],
+            [2,3,7,6],
+            [1,3,7,5],
+            [0,2,6,4],
+            [4,5,7,6]])
+        cube.addgrade(1)
+        cube.addgrade(2)
+        return cube
+    }
+}
+class Minimizer {
+    init(experiment){
+        self.experiment = experiment
+    }
+    go(procedure) {
+        for (step in procedure){
+            if (step[0]=="relax") {
+                    print "relaxing ${step[1]}" 
+                    self.experiment.getOpt().relax(step[1])
+            } else if (step[0]=="refine") {
+                    self.experiment.show()
+​
+                    print("refining")
+                    self.refine()
+                    self.experiment.show()
+​
+            } else if (step[0] == "reguarlize") {
+                    print("reguarlizing")
+                    self.experiment.getRegualrizer.relax(step[1])
+                    self.experiment.getMesh.equiangulate()
+            }
+        }
+    }
+    refine(){
+        var mr=MeshRefiner([self.experiment.getMesh(), self.experiment.getSelections()])
+        var refmap=mr.refine()
+        self.experiment.updateFromRefmap(refmap)
+    }
+​
+}
+​
+​
+class WettingExperiment {
+    init(sigma, deltaSigma, surface) {
+        self.sigma = sigma
+        self.deltaSigma = deltaSigma
+        self.surface = surface
+​
+        var myLibrary = MeshLibrary()
+        self.mesh = myLibrary.cube(1,Matrix([0,0,0])) // makes a cube with side length one cenered at 0,0,0
+        
+        self.minimizationProcedure = [["relax",1000],["refine"],["relax",100000],["refine"],["relax",100000]]
+​
+    }
+    createSelection() {
+        var sel = Selection(self.mesh,fn(x,y,z) abs(self.surface.getEnergy(x,y,z))<self.bottomTolerence)
+        sel.addgrade(1)
+        sel.addgrade(2)
+        return sel
+​
+    }
+    setupProblem(){
+        self.problem = OptimizationProblem(self.mesh)
+        self.bottomTolerence = 5e-1
+​
+        self.bottomBound = Selection(self.mesh,fn (x,y,z) abs(z+0.5)<1e-2)// grab the bottom of the cube
+        self.bottomBound.addgrade(1)
+        self.bottomBound.addgrade(2)
+        //Air water interface
+        self.problem.addenergy(Area(),prefactor = self.sigma)
+        //Water Surface Interface
+        self.problem.addenergy(Area(),selection = self.bottomBound,prefactor = (self.deltaSigma-self.sigma))
+        //pin the boundry to the surface
+        self.problem.addlocalconstraint(self.surface.getPinningFunctional(),selection = self.bottomBound)
+        //volume constraint
+        self.problem.addconstraint(VolumeEnclosed())
+        //create the shape optizmizer
+        self.opt = ShapeOptimizer(self.problem,self.mesh)
+        self.opt.stepsize = 1e-3
+        self.opt.quiet = true
+​
+​
+        self.regproblem = OptimizationProblem(self.mesh)
+        self.regproblem.addenergy(EquiElement())
+        self.regproblem.addlocalconstraint(self.surface.getPinningFunctional(),selection = self.bottomBound)
+        self.regproblem.addconstraint(VolumeEnclosed())
+        self.ropt = ShapeOptimizer(self.regproblem,self.mesh)
+        self.ropt.quiet = true
+​
+    }
+    minimize(){
+        self.myMinimizer = Minimizer(self)
+        self.myMinimizer.go(self.minimizationProcedure)
+    }
+    getMesh(){
+        return self.mesh
+    }
+    getSelections() {
+        return self.bottomBound
+    }
+    updateFromRefmap(refmap) {
+        self.bottomTolerence = self.bottomTolerence/2
+        self.mesh = refmap[self.mesh]
+        var newbnd=self.createSelection()
+        refmap[self.bottomBound]=newbnd
+​
+        // Tell any other objects that refer to the mesh, fields or selections to update their references using refmap
+        for (el in [self.problem, self.opt]) el.update(refmap) // Update the problem
+        for (el in [self.regproblem, self.ropt]) el.update(refmap) // Update the problem
+        self.bottomBound = refmap[self.bottomBound]
+    }
+    getOpt(){
+        return self.opt
+    }
+    getRegualrizer(){
+        return self.ropt
+    }
+    show(title=nil, highlightBound=true, bound=nil, returning=false) {
+        var graphic
+        // if high light bound is true, we highlight the bottom bound by default. highl light specified other wise
+        if (highlightBound) {
+            if (!bound) {bound = self.getSelections()}
+            graphic = plotselection(self.getMesh(), bound, grade=[0,1,2])
+        }
+        else {
+            graphic = plotmesh(self.getMesh(), grade=[0,1,2])
+        }
+        // if no custom title is passed in we show all the param as title
+        if (!title) {
+            graphic.title = self.getTitle()
+                    }
+        else { 
+            graphic.title = title
+        }
+        // show the graphic or return
+        // graph += self.surface.show()
+        if (returning)
+            return graphic
+        Show(graphic)
+    }
+    getTitle() {
+        return "sigma=${self.sigma}; deltaSigma=${self.deltaSigma};" + self.surface.getTitle()
+    }
+​
+​
+}
+​
+class ExpermentManager {
+    exp1() {
+        var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
+        myDroplet.setupProblem()
+        myDroplet.show(highlightBound = true)
+        myDroplet.minimize()
+        myDroplet.show(highlightBound = true)
+    }
+​
+}
+​
+var myExp = ExpermentManager()
+myExp.exp1()
