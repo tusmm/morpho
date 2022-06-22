@@ -192,6 +192,7 @@ class WettingExperiment {
         if (highlightBound) {
             if (!bound) {bound = self.getSelections()}
             graphic = plotselection(self.getMesh(), bound, grade=[0,1,2])
+            // graphic = plotselection(self.getMesh(), bound, grade=[0,1,2])
         }
         else {
             graphic = plotmesh(self.getMesh(), grade=[0,1,2])
@@ -207,7 +208,10 @@ class WettingExperiment {
         // graph += self.surface.show()
         if (returning)
             return graphic
-        Show(graphic)
+
+        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
+        var graphic2 = plotmesh(surface, grade=[0,1, 2])
+        Show(graphic + graphic2)
     }
     getTitle() {
         return "sigma=${self.sigma}; deltaSigma=${self.deltaSigma};" + self.surface.getTitle()
