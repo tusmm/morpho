@@ -1,0 +1,125 @@
+// An easy way to make plots and animations by Danny Goldstein
+import povray
+import plot
+​
+class PrettyPrinter {
+    // Constuctor takes in one or more things to plot.
+    // Passing in a selection requires a mesh
+    init(mesh = nil, grade = nil, graphic = nil,field = nil,selection = nil) {
+        self.mesh = mesh
+        if (grade != nil){
+            self.grade = grade
+        } else {
+            self.grade = 1
+        }
+        self.field = field
+        self.graphic = graphic
+        self.selection = selection
+​
+    }
+    // Make a plot from the a object stored in the printer
+    makePlot() {
+        if (self.selection != nil) {
+            if (self.mesh == nil) {
+            var err = Error("PrettyPrinterNoMesh", "Please supply the Pretty Printer with a Mesh if you wish to use a selection")
+            err.throw()
+            }
+            self.graphic = plotselection(self.mesh,self.selection,grade = self.grade)
+        } else if (self.field != nil) {
+            self.graphic = plotfield(self.field)
+        } else if (self.mesh != nil) {
+            self.graphic = plotmesh(self.mesh,grade = self.grade)
+        } else {
+            var err = Error("PrettyPrinterNoPlotable", "Please supply the Pretty Printer with a Plotable object")
+            err.throw()
+        }
+    }
+    // saves a plot to disk with povray
+    // filename is the name of the .png
+    // dist is how far away the camera is
+    // quite and display tell povray to work quitely and display the result
+    // remakePlot will force a redraw of the plotable
+    save(filename, dist = 5, camera = nil, quiet = false, display = false, remakePlot = true){
+        if (remakePlot || self.graphic == nil ) self.makePlot()
+​
+        var pov = POVRaytracer(self.graphic)
+        if (isnil(camera)) camera = Matrix([1,0,1])
+        if (isnil(pov.light)) {
+            pov.light = [Matrix([3, 3, 5]), Matrix([-3, -3, -5]), Matrix([0, 0, 8]), Matrix([0, 0, -8])]
+        }
+        pov.viewpoint = camera / camera.norm() * dist
+​
+        pov.render(filename+".pov" ,quiet=quiet,display=display)
+    }
+​
+    // Animates a minimzation process
+    // optimizer should be the shape or field optimizer
+    // file name should be the output filename ending in .mp4
+    // total steps the the total number of steps in the optimzation process
+    // duration is how many seconds the movie will last
+    // framerate is the number of frames per seoncd
+    // dist is how far out the camera is
+    // camera is where the camera is placed (it looks at [0,0,0])
+    animateMinimization(optimizer,filename,TotalSteps,protocal = nil,duration = 5, framerate = 30, dist = 5,camera = nil){
+        var nframes = ceil(framerate * duration)
+        var StepPerFrame = ceil(TotalSteps/nframes)
+        if (camera == nil) camera = Matrix([1,0,1])
+        if (protocal == nil) protocal = optimizer.relax
+        
+        self.save("frame_0", dist = dist, camera = camera)
+​
+        for (i in 1..nframes) {
+            protocal(StepPerFrame)
+            self.save("frame_${i}", dist = dist, camera = camera)
+        }
+        self.convertToMP4(framerate,"frame_",filename)
+    }
+    // helper function to calculate a roation matrix
+    rotMatrix(axis,theta){
+        var cth = cos(theta)
+        var sth = sin(theta)
+        var rot = cth*Matrix([[1, 0, 0],[0, 1, 0],[0, 0, 1]])
+        rot += sth*Matrix([[0, -axis[2], axis[1]],[axis[2], 0, -axis[0]],[-axis[1], axis[0], 0]])
+        rot += (1-cth)*axis*axis.transpose()
+        return rot
+    }
+​
+    // animates a graphic by rotating around an axis
+    // file should be the output filename ending in .mp4
+    // framerate is the number of frames per seoncd
+    // duration is how many seconds the movie will last
+    // dist is how far out the camera is
+    // camera is where the camera is placed (it looks at [0,0,0])
+    // axis the the axis to rotate around 
+    // quite and display tell povray to work quitely and display the result
+    animate(file, framerate = 8, duration = 2, dist = 5, camera = nil, axis = nil, quiet = false, display = false) {
+        self.makePlot()
+        var pov = POVRaytracer(self.graphic)
+​
+        if (isnil(axis)) axis = Matrix([0, 0, 1])
+        if (isnil(camera)) camera = Matrix([0,-1,1])
+        var nframes = framerate * duration
+        if (isnil(pov.light)) {
+            pov.light = [Matrix([3, 3, 5]), Matrix([-3, -3, -5]), Matrix([0, 0, 8]), Matrix([0, 0, -8])]
+        }
+        axis = axis/axis.norm()
+        
+        for (i in 0...nframes) {
+            var rot = self.rotMatrix(axis, i/nframes*2*Pi)
+            var pos = rot * camera
+            self.save("frame_${i}",camera = pos, dist = dist, remakePlot = false)
+        }
+        self.convertToMP4(framerate,"frame_",file)
+    }
+    // helper function to make frames into a movie
+    convertToMP4(framerate, framename, outname){
+        // Convert to a movie
+        system("ffmpeg -y -r ${framerate} -f image2 -i ${framename}%d.png -vf \"scale = 2048: 1536, format = yuv420p\" -vcodec libx264 -crf 25  -pix_fmt yuv420p ${outname} ")
+        // Now delete the raw files
+        system("rm ${framename}* ")
+    }
+​
+​
+​
+​
+}

@@ -3,6 +3,8 @@ import functionals
 import meshtools
 import optimize
 import plot
+import color
+import povray
 
 class Surface {
 
@@ -124,7 +126,7 @@ class WettingExperiment {
         return sel
     }
 
-    setupProblem(){
+setupProblem(){
         self.problem = OptimizationProblem(self.mesh)
         self.bottomTolerence = 0.01
         self.bottomBound = self.createSelection()
@@ -132,24 +134,21 @@ class WettingExperiment {
         self.problem.addenergy(Area(),prefactor = self.sigma)
         //Water Surface Interface
         self.problem.addenergy(Area(),selection = self.bottomBound,prefactor = (self.deltaSigma-self.sigma))
-        // declare gravity potential energy
-        var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (x[2]^2)/2)
-        // var meter = 10^(5/3) // treating 1 morpho length cubed as 1 mL
-        // var rho = 1000 / meter^3
-        // var g = 9.8 * meter
-        var rho = 1
-        var g = 9.8
-        // sigma = 0.072
-        self.problem.addenergy(gravitational_potential, prefactor=rho*g)
         //pin the boundry to the surface
         self.problem.addlocalconstraint(self.surface.getPinningFunctional(),selection = self.bottomBound)
         //volume constraint
         self.problem.addconstraint(VolumeEnclosed())
         //create the shape optizmizer
         self.opt = ShapeOptimizer(self.problem,self.mesh)
-        self.opt.stepsize = 1e-2
+        self.opt.stepsize = 1e-3
         self.opt.quiet = true
 
+        // var meter = 10^(5/3) // treating 1 morpho length cubed as 1 mL
+        // var rho = 1000 / meter^3
+        // var g = 9.8 * meter
+        // var rho = 1
+        // var g = 9.8
+        // sigma = 0.072
 
         self.regproblem = OptimizationProblem(self.mesh)
         self.regproblem.addenergy(EquiElement())
@@ -157,7 +156,6 @@ class WettingExperiment {
         self.regproblem.addconstraint(VolumeEnclosed())
         self.ropt = ShapeOptimizer(self.regproblem,self.mesh)
         self.ropt.quiet = true
-
     }
     minimize(){
         self.myMinimizer = Minimizer(self)
@@ -210,8 +208,17 @@ class WettingExperiment {
             return graphic
 
         var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
-        var graphic2 = plotmesh(surface, grade=[0,1, 2])
-        Show(graphic + graphic2)
+        var graphic2 = plotmesh(surface, grade=[2])
+        graphic.background = White
+        graphic2.background = White
+        var g = graphic + graphic2
+
+        // var pov = POVRaytracer(g)
+        // pov.viewpoint=Matrix([0,-5,-5])
+        // pov.viewangle=35
+        // pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+        // pov.render("out.pov")
+        Show(g)
     }
     getTitle() {
         return "sigma=${self.sigma}; deltaSigma=${self.deltaSigma};" + self.surface.getTitle()
@@ -286,33 +293,47 @@ class WettingExperiment {
 }
 
 class ExpermentManager {
-    exp1() {
-        var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
-        myDroplet.setupProblem()
-        myDroplet.show(highlightBound = true)
-        myDroplet.minimize()
-        myDroplet.show(highlightBound = true)
-    }
-    exp2() {
-        var myDroplet = WettingExperiment(1,0.5,CylendricalSurface(1,-0.5))
-        myDroplet.setupProblem()
-        myDroplet.show(highlightBound = true)
-        myDroplet.minimize()
-        myDroplet.show(highlightBound = true)
-    }
+    // exp1() {
+    //     var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
+    //     myDroplet.setupProblem()
+    //     myDroplet.show(highlightBound = true)
+    //     myDroplet.minimize()
+    //     myDroplet.show(highlightBound = true)
+    // }
+    // exp2() {
+    //     var myDroplet = WettingExperiment(1,0.5,CylendricalSurface(1,-0.5))
+    //     myDroplet.setupProblem()
+    //     myDroplet.show(highlightBound = true)
+    //     myDroplet.minimize()
+    //     myDroplet.show(highlightBound = true)
+    // }
     exp3() {
+        // sigma, delta sigma
         // var myDroplet = WettingExperiment(0.072,0.5,PlanarSurface()) // true sigma
-        // var myDroplet = WettingExperiment(1,0.5,PlanarSurface()) // original run
-        var myDroplet = WettingExperiment(3,1,PlanarSurface())
+        var myDroplet = WettingExperiment(1,0.5,PlanarSurface()) // original run
+        // var myDroplet = WettingExperiment(3,1,PlanarSurface())
         myDroplet.minimizationProcedure = [["relax",1000],["refine"], ["reguarlize", 2],
-                                            ["relax",2000],["refine"], ["reguarlize", 2],
+                                            ["relax",1000],["refine"], ["reguarlize", 2],
                                             ["relax",2000],["refine"], ["reguarlize", 2],
                                             ["relax",2000]]
         myDroplet.setupProblem()
         myDroplet.show(highlightBound = true)
         myDroplet.minimize()
         myDroplet.show(highlightBound = true)
-        Show(plotmesh(myDroplet.getMesh()))
+        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
+        var graphic2 = plotmesh(surface, grade=[2])
+
+        var g = plotmesh(myDroplet.getMesh()) + graphic2
+
+        g.background = White
+
+        var pov = POVRaytracer(g)
+        pov.viewpoint=Matrix([0, 4, 0])
+        pov.viewangle=35
+        pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+        pov.render("out.pov")
+        
+        Show(g)
         var angle = myDroplet.getContactAngle()
         print angle[0]
         print angle[1]
