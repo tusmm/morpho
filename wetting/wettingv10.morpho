@@ -214,9 +214,11 @@ class WettingExperiment {
             [1,3,7,5],
             [0,2,6,4],
             [4,5,7,6]])
+        self.cube.addgrade(0)
         self.cube.addgrade(1)
+        self.cube.addgrade(2)
         // defines the bottom bound
-        self.bottom_bound = Selection(self.cube,fn (x,y,z) z < (-0.5 + 1e-10))
+        self.bottom_bound = Selection(self.cube,fn (x,y,z) z = -0.5)
         self.bottom_bound.addgrade(0)
         self.bottom_bound.addgrade(1)
         self.bottom_bound.addgrade(2)

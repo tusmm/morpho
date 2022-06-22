@@ -37,7 +37,7 @@ class WettingExperiment {
         // if high light bound is true, we highlight the bottom bound by default. highl light specified other wise
         if (highlightBound) {
             if (!bound) {bound = self.bottom_bound}
-            graphic = plotselection(self.cube, bound, grade=[0,1,2])
+            graphic = plotselection(self.cube, bound, grade=[2])
         }
         else {
             graphic = plotmesh(self.cube, grade=[0,1,2])
@@ -272,7 +272,7 @@ var wetting = WettingExperiment(4, 1, 9.8, -1, 4)
 
 var cube = wetting.cube
 var ground=Selection(cube, fn (x,y,z) z<=0.0005)
-Show(plotselection(cube, ground, grade=[0,1,2]))
+Show(plotselection(cube, ground, grade=[1]))
 // var cylinder = AreaMesh(fn (u, v) [v, cos(u), sin(u) - 1], -Pi...Pi:Pi/16, -1..1:0.1, closed=[true, false])
 
 wetting.optimize()
@@ -282,5 +282,4 @@ ground.addgrade(1)
 
 
 var cube_graph = plotselection(cube, ground, grade=[0, 1, 2])
-var graph = cube_graph
-Show(graph)
+Show(cube_graph)
