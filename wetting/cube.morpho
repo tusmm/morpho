@@ -19,13 +19,24 @@ var m = PolyhedronMesh([ [-0.5, -0.5, -0.5],
                          [0,1,5,4], [3,2,6,7],
                          [0,2,6,4], [1,3,7,5] ])
 
-var g = Graphics()
-g.display(m)
-var g2 = Graphics()
-g2.display(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
-var totGraphic = g + g2
+// var g = Graphics()
+// g.display(m)
+// var g2 = Graphics()
+// g2.display(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
+// var totGraphic = g + g2
 
-var p = PrettyPrinter(mesh = m ,grade = [2], graphic = totGraphic,field = nil,selection = nil)
-p.animate("droplet.mp4")
+var g = plotmesh(m) + plotmesh(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
+
+g.background = White
+
+var pov = POVRaytracer(g)
+pov.viewpoint=Matrix([0, 6, -1.5])
+pov.viewangle=35
+pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+pov.render("out.pov")
+
+
+// var p = PrettyPrinter(mesh = m ,grade = [2], graphic = totGraphic,field = nil,selection = nil)
+// p.animate("droplet.mp4")
 
 
