@@ -278,7 +278,7 @@ class WettingExperiment {
 
 // main
 // surface - surface does not do anything, just shows
-var r = 100000
+var r = 1
 var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
 var surface_graphic = plotmesh(surface, grade = [1,2])
 
@@ -335,8 +335,17 @@ for (conf in configs) {
     // print cube.contactAngle()
 
     var cube_graphic = cube.show(highlightBound=true, returning=true)
-    var whole_graphic = cube_graphic+surface_graphic
-    whole_graphic.title = cube_graphic.title
+    var g = cube_graphic+surface_graphic
+    g.title = cube_graphic.title
+
+    g.background = White
+
+    var pov = POVRaytracer(g)
+    pov.viewpoint=Matrix([0, 4, 0])
+    pov.viewangle=35
+    pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+    pov.render("out.pov")
+
     Show(whole_graphic)
     // Show(cube_graphic)
 

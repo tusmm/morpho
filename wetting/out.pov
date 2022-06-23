@@ -1,6 +1,6 @@
 #include "colors.inc"
 background { rgb <1, 1, 1> }
-camera {location <-0, -4, -0>up <0,1,0> right <-1.33,0,0> angle 35look_at <0, 0, 0> }
+camera {location <-0, -4, 0.5>up <0,1,0> right <-1.33,0,0> angle 35look_at <0, 0, 0> }
 mesh2 {
 vertex_vectors { 4608, 
 <-0.395538, -0.395538, -0.5>, 

@@ -328,7 +328,7 @@ class ExpermentManager {
         g.background = White
 
         var pov = POVRaytracer(g)
-        pov.viewpoint=Matrix([0, 4, 0])
+        pov.viewpoint=Matrix([0, 4, -0.5])
         pov.viewangle=35
         pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
         pov.render("out.pov")
