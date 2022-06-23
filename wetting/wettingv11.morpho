@@ -315,8 +315,9 @@ class ExpermentManager {
     // }
     exp3() {
         // sigma, delta sigma
-        // var myDroplet = WettingExperiment(0.072,0.5,PlanarSurface()) // true sigma
-        var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // original run
+        // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // true sigma
+        // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // original run
+        var myDroplet = WettingExperiment(0.72,1,PlanarSurface()) // p1
         // var myDroplet = WettingExperiment(3,1,PlanarSurface())
         myDroplet.minimizationProcedure = [["relax",1000],["refine"], ["reguarlize", 2],
                                             ["relax",2000],["refine"], ["reguarlize", 2],
@@ -333,11 +334,11 @@ class ExpermentManager {
 
         g.background = White
 
-        // var pov = POVRaytracer(g)
-        // pov.viewpoint=Matrix([0, 4, -0.5])
-        // pov.viewangle=35
-        // pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
-        // pov.render("out.pov")
+        var pov = POVRaytracer(g)
+        pov.viewpoint=Matrix([0, 4, -0.5])
+        pov.viewangle=35
+        pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+        pov.render("out.pov")
         
         Show(g)
         var angle = myDroplet.getContactAngle()
