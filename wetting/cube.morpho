@@ -4,6 +4,7 @@ import graphics
 import meshtools
 import plot
 import optimize
+import color
 import "PrettyPlots.morpho"
 
 // Create an initial cube
@@ -25,7 +26,7 @@ var m = PolyhedronMesh([ [-0.5, -0.5, -0.5],
 // g2.display(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
 // var totGraphic = g + g2
 
-var g = plotmesh(m) + plotmesh(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
+var g = plotmesh(m, color=Black) + plotmesh(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
 
 g.background = White
 
@@ -38,5 +39,3 @@ pov.render("out.pov")
 
 // var p = PrettyPrinter(mesh = m ,grade = [2], graphic = totGraphic,field = nil,selection = nil)
 // p.animate("droplet.mp4")
-
-

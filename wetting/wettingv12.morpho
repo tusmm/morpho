@@ -1,0 +1,361 @@
+import meshtools
+import plot
+import optimize
+/*
+Wetting Experiment class that encapsulate the experiment model.
+states: 
+    self.sigma: double              // prefactor for surface tension 
+    self.rho: double                // density of the liquid
+    self.g: double                  // gravity in m/s^2
+    self.deltaSigma: double         // prefactor for adhesion
+    self.r: double                  // radius of the cylinder(surface)
+    self.cube: MeshBuilder          // mesh of the experiment 
+    self.bottom_bound: Selection    // selection of all vertices at bottom bound
+    self.problem: OptimizationProblem // problem that defines all the energies and constraint function
+    self.regulator: OptimizationProblem // optimizer that makes the vertices evenly spaced 
+    self.opt: ShapeOptimizer            // Shape optimizer that updates the mesh based on the problem
+    self.ropt: ShapeOptimizer           // Shape optimizer that regulate the mesh based on requests
+    self.delta_cylinder: Double         // Width(thickness) of the cylinder(surface)
+methods:
+    show(title=nil, highlightBound=false, bound=nil)    // show the visual of self.cube
+    regularize(refiter, showEachIter=false)             // regularize method that regularize the mesh.
+    refine(showEachIter=false)                          // refine method that refines the mesh.
+    getopt()                                            // accessor for self.opt
+    getropt()                                           // accessor for self.ropt
+    contactAngle()                                      // find contact angle of the cube
+*/
+class WettingExperiment {
+    /*
+    Constructor for a Wetting Experiment.
+    Set up everything for a wetting experiment model.
+        @param sigma: double              // prefactor for surface tension 
+        @param rho: double                // density of the liquid
+        @param g: double                  // gravity in m/s^2
+        @param deltaSigma: double         // prefactor for adhesion
+        @param r: double                  // radius of the surface -- we are testing on a cylinder(jun/7)
+    */
+    init(sigma, rho, g, deltaSigma, r) {
+        self.sigma = sigma
+        self.rho = rho
+        self.g = g
+        self.deltaSigma = deltaSigma
+        self.r = r
+        self.delta_cylinder = 0.1
+        self._makeCubeMesh()
+        self._declareProblem()
+        self._declareRegulator() // commented out for checking how it would look without regulator
+        self._setupOptimization()
+    }
+
+    /* 
+    Show method display the cube that is stored as a property of the Wetting instance
+        @param title: String            // the name of the window to be shown
+        @param highlightBound: Boolean  // whether to highlight the bound or not
+        @param bound: Selection         // the bound to be highlighted in the graphic
+    */
+    show(title=nil, highlightBound=false, bound=nil, returning=false) {
+        var graphic
+        // if high light bound is true, we highlight the bottom bound by default. highl light specified other wise
+        if (highlightBound) {
+            if (!bound) {bound = self.bottom_bound}
+            graphic = plotselection(self.cube, bound, grade=[0,1,2])
+        }
+        else {
+            graphic = plotmesh(self.cube, grade=[0,1,2])
+        }
+        // if no custom title is passed in we show all the param as title
+        if (!title) {
+            graphic.title = "sigma=${self.sigma}; rho=${self.rho}; g=${self.g}; deltaSigma=${self.deltaSigma}; r=${self.r}"
+        }
+        else { 
+            graphic.title = title
+        }
+        // show the graphic or return
+        if (returning)
+            return graphic
+        Show(graphic)
+    }
+
+    /*
+    Regularize method that regularize the mesh.
+    This regularization will try to make sure each triangle
+    are equiangulated. regularization is based on set up of self.ropt
+        @param showEachIter: Boolean        // true to show each result graphic after a refine loop, show nothing otherwise.
+    */
+    regularize(refiter, showEachIter=false) {
+        self.ropt.stepsize = 0.0001/refiter
+        self.ropt.steplimit = 0.0001/refiter
+        self.ropt.linesearch(2)
+        equiangulate(self.cube)
+        if (showEachIter) 
+            Show(plotselection(self.cube, self.bottom_bound, grade=[0,1,2]))
+    }
+    /*
+    Refine method that refines the mesh.
+    This will add extra verticies and make more triangle for the mesh
+    It will refine based on the defined problem
+    This function will also update the self.cube mesh
+        @param showEachIter: Boolean        // true to show each result graphic after a refine loop, show nothing otherwise.
+    */
+    refine(showEachIter=false) {
+        var mr=MeshRefiner([self.cube, self.bottom_bound])
+        // Set the refiner up
+        // args: mesh, field, selection
+        
+        var refmap=mr.refine()
+        // Perform the refinement
+        // center of the cylinder 00 -r -1/2
+        var newbnd=Selection(refmap[self.cube], fn(x,y,z) self.delta_cylinder>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
+        newbnd.addgrade(1)
+        newbnd.addgrade(2)
+        self.delta_cylinder = self.delta_cylinder/2
+        refmap[self.bottom_bound]=newbnd
+
+        // Tell any other objects that refer to the mesh, fields or selections to update their references using refmap
+        for (el in [self.problem, self.opt]) el.update(refmap) // Update the problem
+
+        // Update our own references
+        self.cube=refmap[self.cube]; self.bottom_bound=refmap[self.bottom_bound] // Update variable
+        // show each iter
+        if (showEachIter) 
+            // Show(plotselection(self.cube, self.bottom_bound, grade=[0,1,2]))
+            self.show(highlightBound=true)
+    }
+
+    /* 
+    Accessor for self.opt, used for customizing states and accessing methods of the shape optimizer
+        @return self.opt        // this is the shape optimizer of the cube
+    */
+    getopt() {
+        return self.opt
+    }
+    
+    /* 
+    Accessor for self.ropt, used for customizing states and accessing methods of the regulator optimizer
+        @return self.ropt        // this is the regulator optimizer of the cube
+    */
+    getropt() {
+        return self.ropt
+    }
+
+    /*
+    A method that calculates and return the contact angle between the bottom and the face of
+    the bottom bound lines.
+        @return contactAngle: Double        // the contact angle between surface and the droplet
+    */
+    contactAngle() {
+        var bndLines = self.bottom_bound.idlistforgrade(1)
+        var boundFaces = self.bottom_bound.idlistforgrade(2)
+        var boundVertices = self.bottom_bound.idlistforgrade(0)
+        var lineToFace = self.cube.connectivitymatrix(2,1)
+        var faceToVertex = self.cube.connectivitymatrix(0,2)
+        var contactangle = 0
+        var contactFaces = []
+        var contactAngles = []
+        for (line in bndLines) { // for each line in the boundary
+            var faces = lineToFace.rowindices(line) // find the face it is attached to
+
+            for (face in faces) {
+                if (!boundFaces.ismember(face) && !contactFaces.ismember(face)) {
+                    contactFaces.append(face)
+                }
+            }
+        }
+
+        for (face in contactFaces) {
+            var vertexNum = faceToVertex.rowindices(face) // find the vertices on that face
+            var pTop
+            var pSurface = []
+            for (vertex in vertexNum) {
+                if (boundVertices.ismember(vertex)) { 
+                    pSurface.append(vertex)
+                }
+                else {
+                    pTop = vertex
+                }
+            } 
+            var pMid = (1/2)*(self.cube.vertexposition(pSurface[0]) + self.cube.vertexposition(pSurface[1]))
+            var vFaceTangent = self.cube.vertexposition(pTop) - pMid
+            var vRad = pMid - Matrix([pMid[0], 0, -0.5-self.r])
+            var vedge = (self.cube.vertexposition(pSurface[0]) - self.cube.vertexposition(pSurface[1]))
+            var vSurfaceTangent = self._getCross(vedge, vRad)
+            var vContactRadius = pMid - Matrix([0, 0, -0.5]) 
+            if (vSurfaceTangent.inner(vContactRadius) < 0) {
+                vSurfaceTangent = -vSurfaceTangent
+            }
+            var contactRadian = Pi - acos(vFaceTangent.inner(vSurfaceTangent)/(vFaceTangent.norm()*vSurfaceTangent.norm()))
+            var contactDegree = contactRadian/Pi*180
+            contactAngles.append(contactDegree)
+            contactangle += contactDegree/contactFaces.count()
+        }
+        return [contactAngles, contactangle]
+      }
+
+    /* 
+    PRIVATE METHOD: Set up self.opt and self.ropt. User can customize the optimizer
+    by accessing getopt() or getropt() and modify their states and access their 
+    methods.
+    */
+    _setupOptimization() {
+        self.opt = ShapeOptimizer(self.problem, self.cube)
+        self.opt.stepsize = 0.001
+        self.ropt = ShapeOptimizer(self.regulator, self.cube) 
+        self.ropt.fix(self.bottom_bound)                
+    }
+    /*
+    PRIVATE METHOD: gets the cross product
+        @param a: Matrix    // Matrix A
+        @param b: Matrix    // Matrix B
+        @return cross(): function // returns a packed function of matrix
+    */
+    _getCross(a, b) {
+        fn cross(a, b) {
+            return Matrix([ a[1]*b[2]-a[2]*b[1],
+                            a[2]*b[0]-a[0]*b[2],
+                            a[0]*b[1]-a[1]*b[0] ])
+        }
+        return cross(a, b)
+    }
+
+    /* PRIVATE METHOD: initialize the self.cube property to simply be a cube*/
+    _makeCubeMesh() {
+        self.cube = PolyhedronMesh(
+            [[-0.5,-0.5,-0.5],
+            [-0.5,0.5,-0.5],
+            [0.5,-0.5,-0.5],
+            [0.5,0.5,-0.5],
+            [-0.5,-0.5,0.5],
+            [-0.5,0.5,0.5],
+            [0.5,-0.5,0.5],
+            [0.5,0.5,0.5]],
+            [
+            [0,1,3,2],
+            [0,1,5,4],
+            [2,3,7,6],
+            [1,3,7,5],
+            [0,2,6,4],
+            [4,5,7,6]])
+        self.cube.addgrade(1)
+        // defines the bottom bound
+        self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.1>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
+        self.bottom_bound.addgrade(0)
+        self.bottom_bound.addgrade(1)
+        self.bottom_bound.addgrade(2)
+    }
+    
+    /* PRIVATE METHOD: declare and set up the problem for the experiment */
+    _declareProblem() {
+        // initialize optimization problem
+        self.problem = OptimizationProblem(self.cube)
+        // declare surface tension energy
+        var deltaSigma_minus_sigma = self.deltaSigma - self.sigma // should be negative
+        var surface_area_bottom = Area()
+        var surface_area_air = Area()
+        var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (((x[2])^2/2)))
+        // declare adhesion
+        var adhesion = Area()
+        // declare volume constraint
+        var volume_constraint = VolumeEnclosed()
+        
+        // add all energy and constraint to the problem
+        self.problem.addenergy(surface_area_bottom, selection=self.bottom_bound, prefactor=deltaSigma_minus_sigma)
+        self.problem.addenergy(surface_area_air, prefactor=self.sigma)
+        self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g)
+        self.problem.addconstraint(volume_constraint)
+
+        // add constraint that makes all vertices stays at z=0 regulates that so all bounds will stay at z=0
+        // local constraint are usually applied for each vertex/edge/face. example in this case,
+        // the local constraint tells every vertices at the bound to go to z = 1.
+        self.problem.addlocalconstraint(ScalarPotential(fn (x,y,z) y^2+(z+0.5+self.r)^2-self.r^2, fn(x,y,z) Matrix([0,2*y,2*(z+0.5+self.r)])), selection=self.bottom_bound)
+    }
+
+    /* PRIVATE METHOD: declare and set up a regulator for the mesh */
+    _declareRegulator() {
+        // initialize regulator optimization problem
+        self.regulator = OptimizationProblem(self.cube)
+        // add Equi Element energy to the regulator 
+        self.regulator.addenergy(EquiElement())         
+
+    }
+
+    /* For debug usage, this method prints out all the gradienst in the problem */
+    printGradients() {
+        print "\n energy gradients"
+        for (el in self.problem.energies) print self.opt.gradient(el)
+        print "\n constraint gradients"
+        for (el in self.problem.constraints) print self.opt.gradient(el)
+        print "\n local constraint gradients"
+        for (el in self.problem.localconstraints) print self.opt.gradient(el)
+    }
+}
+
+
+// main
+// surface - surface does not do anything, just shows
+var r = 2
+var surface = AreaMesh(fn (u, v) [v, r*cos(u), r*sin(u)-r-0.5], -Pi...Pi:Pi/16, -3..3:0.1, closed=[true, false])
+var surface_graphic = plotmesh(surface, grade = [1,2])
+
+var kg = 1 // treating 1 morpho mass as 1 kg
+var second = 1 // treating 1 morpho time as 1 second
+var meter = 10^(8/3) // treating 1 morpho length cubed as 1 mL
+var rho = 1000 * kg / (meter^3)
+var g = 9.8 * meter / (second^2)
+var sigma = 0.072 * kg / (second^2)
+var configs = [
+    // [3,0,9.8,1], 
+    // [6,0,9.8,1], 
+    // [3,0,9.8,4],
+    // [3,0,9.8,10],   
+    // [3,0,9.8,15],
+    // [3,0,9.8,0.1],
+    // [3,0,9.8,-1],
+    // [3,1,9.8,1]
+    [sigma, rho, g, 1]
+    ]
+
+for (conf in configs) {
+    // cube and optimize
+    //WettingExperiment(sigma, density, gravity, deltaSigma, radius)
+    var cube = WettingExperiment(conf[0], conf[1], conf[2], conf[3], r)
+
+    var opt = cube.getopt()
+    opt.quiet=false
+    var ropt = cube.getropt() // commented out for checking how it would look without regulator
+
+    // cube.show(highlightBound=true)
+
+
+    var refmax = 5
+    var itermax = 3
+    var relaxCount = 100
+    opt.relax(10)
+    for (refiter in 1..refmax) {
+        //cube.printGradients()
+        if (refiter < refmax) {
+            print "===Refinement level ${refiter}==="
+            opt.relax(relaxCount)
+            if (refiter == refmax) break
+            cube.refine(showEachIter=false)
+            opt.stepsize = opt.stepsize/1.2
+            relaxCount = relaxCount*(r+1)
+            if (relaxCount > 1000) {relaxCount = 1000}
+        }
+        if (refiter < refmax-2) {
+            for (iter in 1..itermax) {
+                cube.regularize(iter)
+            }
+        }
+    }
+
+    // cube.show(highlightBound=true)
+    var value = cube.contactAngle()
+    print value[0]
+    print value[1]
+
+    var cube_graphic = cube.show(highlightBound=true, returning=true)
+    var whole_graphic = cube_graphic+surface_graphic
+    whole_graphic.title = cube_graphic.title
+    Show(whole_graphic)
+    // Show(cube_graphic)
+}
