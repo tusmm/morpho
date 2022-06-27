@@ -83,7 +83,8 @@ class Minimizer {
             if (step[0]=="relax") {
                     print "relaxing ${step[1]}" 
                     self.experiment.getOpt().relax(step[1])
-                    self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize/1.3
+                    // self.experiment.getOpt().stepsize = 0.9
+                    self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize/1.4
             } else if (step[0]=="refine") {
                     // self.experiment.show()
 
@@ -94,7 +95,7 @@ class Minimizer {
             } else if (step[0] == "reguarlize") {
                     print("reguarlizing")
                     self.experiment.getRegualrizer().linesearch(step[1])
-                    // self.experiment.getRegualrizer().stepsize = 0.9
+                    self.experiment.getRegualrizer().stepsize = self.experiment.getRegualrizer().stepsize / 0.9
                     equiangulate(self.experiment.getMesh())
             }
         }
@@ -302,33 +303,18 @@ setupProblem(){
 }
 
 class ExpermentManager {
-    // exp1() {
-    //     var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
-    //     myDroplet.setupProblem()
-    //     myDroplet.show(highlightBound = true)
-    //     myDroplet.minimize()
-    //     myDroplet.show(highlightBound = true)
-    // }
-    // exp2() {
-    //     var myDroplet = WettingExperiment(1,0.5,CylendricalSurface(1,-0.5))
-    //     myDroplet.setupProblem()
-    //     myDroplet.show(highlightBound = true)
-    //     myDroplet.minimize()
-    //     myDroplet.show(highlightBound = true)
-    // }
     exp3() {
         // higher deltaSigma, the higher the contact angle, vice versa
         // sigma, delta sigma
         // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // true sigma
         // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // original run
         // var myDroplet = WettingExperiment(0.72,1,PlanarSurface()) // testing
-        var myDroplet = WettingExperiment(0.72, 0.71, PlanarSurface()) // glass
+        var myDroplet = WettingExperiment(0.72, -0.2, PlanarSurface()) // glass
         // var myDroplet = WettingExperiment(3,1,PlanarSurface())
         myDroplet.minimizationProcedure = [["relax",1000],["refine"], ["reguarlize", 2],
                                             ["relax",1000],["refine"], ["reguarlize", 2],
                                             ["relax",2000],["refine"], ["reguarlize", 3],
-                                            ["relax",3000], ["refine"], ["regularize", 3], 
-                                            ["regularize", 3]]
+                                            ["relax",3000], ["regularize", 3]]
         myDroplet.setupProblem()
         myDroplet.show(highlightBound = true)
         myDroplet.minimize()
