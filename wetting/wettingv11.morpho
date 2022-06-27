@@ -84,7 +84,7 @@ class Minimizer {
                     print "relaxing ${step[1]}" 
                     self.experiment.getOpt().relax(step[1])
                     // self.experiment.getOpt().stepsize = 0.9
-                    self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize/1.4
+                    self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize / 1.4
             } else if (step[0]=="refine") {
                     // self.experiment.show()
 
@@ -95,7 +95,7 @@ class Minimizer {
             } else if (step[0] == "reguarlize") {
                     print("reguarlizing")
                     self.experiment.getRegualrizer().linesearch(step[1])
-                    self.experiment.getRegualrizer().stepsize = self.experiment.getRegualrizer().stepsize / 0.9
+                    self.experiment.getRegualrizer().stepsize = self.experiment.getRegualrizer().stepsize / 1.4
                     equiangulate(self.experiment.getMesh())
             }
         }
@@ -130,7 +130,7 @@ class WettingExperiment {
 
 setupProblem(){
         self.problem = OptimizationProblem(self.mesh)
-        self.bottomTolerence = 0.01
+        self.bottomTolerence = 0.001
         self.bottomBound = self.createSelection()
         //Air water interface
         self.problem.addenergy(Area(),prefactor = self.sigma)
@@ -205,13 +205,6 @@ setupProblem(){
         else {
             graphic = plotmesh(self.getMesh(), grade=[0,1,2])
         }
-        // if no custom title is passed in we show all the param as title
-        if (!title) {
-            graphic.title = self.getTitle()
-                    }
-        else { 
-            graphic.title = title
-        }
         // show the graphic or return
         // graph += self.surface.show()
         if (returning)
@@ -228,6 +221,13 @@ setupProblem(){
         // pov.viewangle=35
         // pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
         // pov.render("out.pov")
+        // if no custom title is passed in we show all the param as title
+        if (!title) {
+            g.title = self.getTitle()
+        }
+        else { 
+            g.title = title
+        }
         Show(g)
     }
     getTitle() {
@@ -304,16 +304,14 @@ setupProblem(){
 
 class ExpermentManager {
     exp3() {
-        // higher deltaSigma, the higher the contact angle, vice versa
-        // sigma, delta sigma
+        // WettingExperiment(sigma, delta sigma, type_of_surface)
         // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // true sigma
-        // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // original run
-        // var myDroplet = WettingExperiment(0.72,1,PlanarSurface()) // testing
-        var myDroplet = WettingExperiment(0.72, -0.2, PlanarSurface()) // glass
-        // var myDroplet = WettingExperiment(3,1,PlanarSurface())
-        myDroplet.minimizationProcedure = [["relax",1000],["refine"], ["reguarlize", 2],
-                                            ["relax",1000],["refine"], ["reguarlize", 2],
-                                            ["relax",2000],["refine"], ["reguarlize", 3],
+        // var myDroplet = WettingExperiment(0.72, -0.2, PlanarSurface()) // glass
+        var myDroplet = WettingExperiment(0.72,-0.05,PlanarSurface()) // p1
+        // var myDroplet = WettingExperiment(0.72,0, PlanarSurface()) // p2
+        myDroplet.minimizationProcedure = [["relax",1000],["refine"],
+                                            ["relax",1000],["refine"],
+                                            ["relax",2000],["refine"],
                                             ["relax",3000], ["regularize", 3]]
         myDroplet.setupProblem()
         myDroplet.show(highlightBound = true)
