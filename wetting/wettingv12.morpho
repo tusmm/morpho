@@ -330,10 +330,10 @@ class ExpermentManager {
         myDroplet.show(highlightBound = true)
     }
     exp3() {
-        var myDroplet = WettingExperiment(0.72,0.15,PlanarSurface())
-        myDroplet.minimizationProcedure = [["relax",150],["refine"],
-                                            ["relax",200],["refine"],
+        var myDroplet = WettingExperiment(0.72,0,PlanarSurface())
+        myDroplet.minimizationProcedure = [["relax",200],["refine"],
                                             ["relax",300],["refine"],
+                                            ["relax",400],["refine"],
                                             ["relax",100]]
         myDroplet.setupProblem()
         myDroplet.minimize()
@@ -351,8 +351,8 @@ class ExpermentManager {
         g.background = White
 
         var pov = POVRaytracer(g)
-        pov.viewpoint=Matrix([0, 4, -2])
-        pov.viewangle=35
+        pov.viewpoint=Matrix([0, -1.8, 0.5])
+        pov.viewangle=90
         pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
         pov.render("out.pov")
 
