@@ -97,7 +97,7 @@ class Minimizer {
                         // self.prettyPrinter.save("frame_${count}", dist = dist, camera = camera)
                         // count+=1
                     // }
-                    self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize/1.2
+                    // self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize/1.2
                     // if (self.experiment.getOpt().stepsize < 0.0001) self.experiment.getOpt().stepsize = 0.0001
                     // self.prettyPrinter.mesh = self.experiment.getMesh()
                     // self.experiment.bottomBound = self.experiment.createSelection()
@@ -158,7 +158,7 @@ class WettingExperiment {
         // //Gravitational potential TODO: THIS CODE IS BUGGY
         //TODO: make density a parameter
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (((x[2])^2/2)))
-        self.problem.addenergy(gravitational_potential, prefactor=0.01*45.4876)
+        self.problem.addenergy(gravitational_potential, prefactor=0.01*45.4876 * 0)
         //Water Surface Interface
         self.problem.addenergy(Area(),selection = self.bottomBound,prefactor = (self.deltaSigma-self.sigma))
         //pin the boundry to the surface
@@ -330,39 +330,45 @@ class ExpermentManager {
         myDroplet.show(highlightBound = true)
     }
     exp3() {
-        var myDroplet = WettingExperiment(0.72,0,PlanarSurface())
-        myDroplet.minimizationProcedure = [["relax",200],["refine"],
-                                            ["relax",300],["refine"],
-                                            ["relax",400],["refine"],
-                                            ["relax",100]]
-        myDroplet.setupProblem()
-        myDroplet.minimize()
-        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
-        var graphic2 = plotmesh(surface, grade=[0,1,2])
-        // Show(plotmesh(myDroplet.getMesh()))
-        // Show(plotselection(myDroplet.getMesh(), myDroplet.bottomBound) + graphic2)
-        var angle = myDroplet.getContactAngle()
-       
-        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
-        var graphic2 = plotmesh(surface, grade=[2])
+        var counter = 1
+        for (i in -0.72..0.72:0.02) {
+            var myDroplet = WettingExperiment(0.72,i,PlanarSurface())
+            myDroplet.minimizationProcedure = [["relax",500],["refine"],
+                                                ["relax",400],["refine"],
+                                                ["relax",300],["refine"],
+                                                ["relax",10]]
+            myDroplet.setupProblem()
+            myDroplet.minimize()
+            var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5],
+                        [-2.5,2.5,-1],[2.5,2.5,-1],[-2.5,-2.5,-1],[2.5,-2.5,-1]],
 
-        var g = plotmesh(myDroplet.getMesh()) + graphic2
+                        [[0,1,3,2], [0,1,5,4], [0,2,6,4], [7,3,2,6],
+                        [1,3,7,5], [4,6,7,5]])
 
-        g.background = White
+            var graphic2 = plotmesh(surface, grade=[0,1,2])
+            // Show(plotmesh(myDroplet.getMesh()))
+            // Show(plotselection(myDroplet.getMesh(), myDroplet.bottomBound) + graphic2)
+            var angle = myDroplet.getContactAngle()
+    
+            var graphic2 = plotmesh(surface, grade=[2])
 
-        var pov = POVRaytracer(g)
-        pov.viewpoint=Matrix([0, -1.8, 0.5])
-        pov.viewangle=90
-        pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
-        pov.render("out.pov")
+            var g = plotmesh(myDroplet.getMesh()) + graphic2
 
-        print angle[0]
-        print angle[1]
+            g.background = White
 
-        // prett plots
-        // var prettyPrinter = PrettyPrinter(mesh=myDroplet.getMesh(), graphic=graphic2, grade = 2)
-        // prettyPrinter.animateMinimization(myDroplet.getOpt(), "minimize.mp4", 4000)
-        // prettyPrinter.animate("droplet.mp4")
+            var pov = POVRaytracer(g)
+            pov.viewpoint=Matrix([0, -1.8, 0.5])
+            pov.viewangle=90
+            pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+            var fileName = "${counter}d:${i}_${angle[1]}.pov"
+            pov.render(fileName, quiet=true, display=false)
+            counter += 1
+
+            // prett plots
+            // var prettyPrinter = PrettyPrinter(mesh=myDroplet.getMesh(), graphic=graphic2, grade = 2)
+            // prettyPrinter.animateMinimization(myDroplet.getOpt(), "minimize.mp4", 4000)
+            // prettyPrinter.animate("droplet.mp4")
+        }
     }
     testtetra() {
         var myDroplet = WettingExperiment(1, 0.5, PlanarSurface())
