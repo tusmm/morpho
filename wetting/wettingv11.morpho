@@ -307,8 +307,8 @@ class ExpermentManager {
         // WettingExperiment(sigma, delta sigma, type_of_surface)
         // var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // true sigma
         // var myDroplet = WettingExperiment(0.72, -0.2, PlanarSurface()) // glass
-        // var myDroplet = WettingExperiment(0.72,-0.095,PlanarSurface()) // p1 ~ 82.6 degrees
-        var myDroplet = WettingExperiment(0.72, -0.0195, PlanarSurface()) // p2 ~ 88.8 degrees
+        var myDroplet = WettingExperiment(0.72,-0.095,PlanarSurface()) // p1 ~ 82.6 degrees
+        // var myDroplet = WettingExperiment(0.72, -0.0195, PlanarSurface()) // p2 ~ 88.8 degrees
         // var myDroplet = WettingExperiment(0.72, 0, PlanarSurface()) // control ~ 90 degrees
         myDroplet.minimizationProcedure = [["relax",1000],["refine"],
                                             ["relax",1000],["refine"],
