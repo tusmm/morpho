@@ -356,16 +356,23 @@ class ExpermentManager {
 
             g.background = White
 
+
+            // fixes the order of files
+            var fileNum = "${counter}"
+            if (counter < 10) {
+                fileNum = "0${counter}"
+            }
+
             var pov = POVRaytracer(g)
             pov.viewpoint=Matrix([0, -1.8, 0.5])
             pov.viewangle=90
             pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
-            var fileName = "d_${counter}${i}_${angle[1]}.pov"
+            var fileName = "d_${fileNum}${i}_${angle[1]}.pov"
             pov.render(fileName, quiet=true, display=false)
             counter += 1
 
-            var csv = File("data.csv", "append")
-            csv.write("${i},${angle[1]},${angle[0]}")
+            // var csv = File("data.csv", "append")
+            // csv.write("${i},${angle[1]},${angle[0]}")
 
             // prett plots
             // var prettyPrinter = PrettyPrinter(mesh=myDroplet.getMesh(), graphic=graphic2, grade = 2)
