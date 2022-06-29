@@ -139,13 +139,7 @@ var bndVertices = testSelection.idlistforgrade(0) // list of verticies of the se
 var lineToFace = cube.connectivitymatrix(2,1) // gets all the edges connecting faces
 var faceToVertex = cube.connectivitymatrix(0,2) // gets al the faces connecting to vertex
 var sel2 = []
-for (v in testSelection) {
-    var vertex = lineToFace.rowindices(v)
-    // get the vertices 
-    // and see what vertices have one connection
-    if ()
-    // if the neighbor is not in testSelection, add it to selection2
-}
+
 
 Show(plotselection(cube, testSelection, grade=[0,1,2]))
 

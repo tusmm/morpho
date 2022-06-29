@@ -323,7 +323,11 @@ class ExpermentManager {
         myDroplet.show(highlightBound = true)
     }
     exp2() {
-        var myDroplet = WettingExperiment(1,0.5,CylendricalSurface(1,-0.5))
+        var myDroplet = WettingExperiment(0.72,0.5,CylendricalSurface(1,-0.5))
+        myDroplet.minimizationProcedure = [["relax",500],["refine"],
+                                                ["relax",400],["refine"],
+                                                ["relax",300],["refine"],
+                                                ["relax",10]]
         myDroplet.setupProblem()
         myDroplet.show(highlightBound = true)
         myDroplet.minimize()

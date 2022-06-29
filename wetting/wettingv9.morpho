@@ -1,6 +1,7 @@
 import meshtools
 import plot
 import optimize
+import povray
 /*
 Wetting Experiment class that encapsulate the experiment model.
 states: 
@@ -58,10 +59,10 @@ class WettingExperiment {
         // if high light bound is true, we highlight the bottom bound by default. highl light specified other wise
         if (highlightBound) {
             if (!bound) {bound = self.bottom_bound}
-            graphic = plotselection(self.cube, bound, grade=[0,1,2])
+            graphic = plotselection(self.cube, bound, grade=[2])
         }
         else {
-            graphic = plotmesh(self.cube, grade=[0,1,2])
+            graphic = plotmesh(self.cube, grade=[2])
         }
         // if no custom title is passed in we show all the param as title
         if (!title) {
@@ -223,9 +224,8 @@ class WettingExperiment {
         self.cube.addgrade(1)
         // defines the bottom bound
         self.bottom_bound = Selection(self.cube, fn(x,y,z) 0.1>abs(((z+self.r+0.5))^2 + (y)^2)^(1/2)-self.r)
-        self.bottom_bound.addgrade(0)
-        self.bottom_bound.addgrade(1)
-        self.bottom_bound.addgrade(2)
+
+       
     }
     
     /* PRIVATE METHOD: declare and set up the problem for the experiment */
@@ -288,7 +288,7 @@ var configs = [
     // [3,0,9.8,4]  // does not change on r = 2 nor 0.5
     // [3,1,9.8,10],   // does not goes into the pipe
     //[3,0,9.8,0.1]    // only one vertex stick to the cylinder, diamond shape
-    [3,1,9.8,1]    // only one vertex stick to the cylinder, diamond shape
+    [0.72,0.01,45.4876,1]    // only one vertex stick to the cylinder, diamond shape
    // [3,0,9.8,10]
     ]
 
@@ -304,7 +304,7 @@ for (conf in configs) {
 
     // cube.show(highlightBound=true)
 
-    var refmax = 3 // for refinement and relaxation
+    var refmax = 4 // for refinement and relaxation
     var itermax = 2 // for regularization
     var relaxCount = 100
     opt.relax(10)
@@ -341,12 +341,11 @@ for (conf in configs) {
     g.background = White
 
     var pov = POVRaytracer(g)
-    pov.viewpoint=Matrix([0, 4, 0])
+    pov.viewpoint=Matrix([2, -4, -2])
     pov.viewangle=35
     pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
     pov.render("out.pov")
 
-    Show(whole_graphic)
     // Show(cube_graphic)
 
     // gravity is not pushing down on all points towards the surface of the cylinder
