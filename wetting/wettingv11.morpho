@@ -1,4 +1,3 @@
-//surfaces.morpho
 /*
 This file utilizes the Morpho programming language to simulate the 
 contact angle experiment. 
@@ -327,8 +326,12 @@ setupProblem(){
         Show(g)
     }
 
+    /*
+    saveImage uses povray to save an image of the model as a PNG file
+        @params graphic    the graphic to be saved
+    */
     saveImage(mesh) {
-        var g = plotmesh(mesh)
+        var g = plotmesh(graphic)
         g.background = White
         var pov = POVRaytracer(g)
         pov.viewpoint=Matrix([0,-5,-5])

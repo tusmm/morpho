@@ -5,23 +5,33 @@ import meshtools
 import plot
 import optimize
 import color
-import "PrettyPlots.morpho"
+import povray
 
 // Create an initial cube
-var m = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5],
-                        [-2.5,2.5,-1],[2.5,2.5,-1],[-2.5,-2.5,-1],[2.5,-2.5,-1]],
+var m = PolyhedronMesh(
+            [[-0.5,-0.5,-0.5],
+            [-0.5,0.5,-0.5],
+            [0.5,-0.5,-0.5],
+            [0.5,0.5,-0.5],
+            [-0.5,-0.5,0.5],
+            [-0.5,0.5,0.5],
+            [0.5,-0.5,0.5],
+            [0.5,0.5,0.5]],
+            [
+            [0,1,3,2],
+            [0,1,5,4],
+            [2,3,7,6],
+            [1,3,7,5],
+            [0,2,6,4],
+            [4,5,7,6]])
+var g = plotmesh(m)
 
-                        [[0,1,3,2], [0,1,5,4], [0,2,6,4], [7,3,2,6],
-                        [1,3,7,5], [4,6,7,5]])
+g.background = White
 
-// var g = Graphics()
-// g.display(m)
-// var g2 = Graphics()
-// g2.display(PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]]))
-// var totGraphic = g + g2
+var pov = POVRaytracer(g)
+pov.viewpoint=Matrix([-2, -3, -2])
+pov.viewangle=35
+pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+var fileName = "out.pov"
+pov.render(fileName, quiet=true, display=false)
 
-Show(plotmesh(m))
-
-
-// var p = PrettyPrinter(mesh = m ,grade = [2], graphic = totGraphic,field = nil,selection = nil)
-// p.animate("droplet.mp4")
