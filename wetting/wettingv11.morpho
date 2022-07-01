@@ -1,15 +1,10 @@
-/*
-This file utilizes the Morpho programming language to simulate the 
-contact angle experiment. 
-*/
-
+//surfaces.morpho
 import functionals
 import meshtools
 import optimize
 import plot
 import color
 import povray
-
 /*
 Surface class, parent class that changes the surface the droplet
 is sitting on. 
@@ -19,91 +14,86 @@ class Surface {
     Gets the set Scalar Potential to apply on the bottom surface of an 
     experiment. 
     */
-    getPinningFunctional() {
+    getPinningFunctional(){
         return ScalarPotential(self.getEnergy,self.getGradE)
     }
-    
     /*
     Gets the name of the experiment. 
     */
-    getTitle() { return "${self.name}" }
+    getTitle() { return "${self.name}"}
 }
 /*
 Planar surface class, contains implementation of a flat surface.
 */
-class PlanarSurface is Surface {
+class PlanarSurface is Surface{
     /*
     initializes a Planar Surface
         @param  n   the normal of the surface
         @param  point   the center point of the surface
         @precondition   the droplet is centered at [0,0,0]
     */
-    init (n = nil, point = nil) {
+    init(n = nil, point = nil) {
         if (isnil(n)) self.normal = Matrix([0,0,1])
         else self.normal = n
 
         if (isnil(point)) self.point = Matrix([0,0,-0.5])
         else self.point = point
 
-        // the name of the Surface
         self.name = "Plane"
     }
-
     /*
-    Gets the energy of the surface
-        @param  x,y,z -> refers to the coordinate at this point
-        @return the energy of the surface
-    */
-    getEnergy(x,y,z) { return self.normal.inner(Matrix([x,y,z])-self.point) }
-
+     get the scalar potential at a point.
+     returns 0 if the point is on the surface, other wise some other int will be returned.
+        @param x, y, z: coordinates of the point
+        @return scalar: scalar potential at the point (x,y,z)
+     */
+    getEnergy(x,y,z) {return self.normal.inner(Matrix([x,y,z])-self.point)}
     /*
-    Gets the gradient energy/change in energy of the surface, 
-        @param  x,y,z -> refers to the coordinate at this point
-        @return the gradient energy of the surface
-    */
-    getGradE(x,y,z) { return self.normal }
+     get the gradient of the scalar potential at a point.
+     returns 0 if the point is on the surface, other wise some other int will be returned.
+        @param x, y, z: coordinates of the point
+        @return scalar: scalar potential at the point (x,y,z)
+     */
+    getGradE(x,y,z) {return self.normal}
 
 }
-
 /*
 CylindricalSurface class, creates a cylindrical surface for the droplet to sit on
 */
-class CylindricalSurface is Surface {
+class CylendricalSurface is Surface {
     /*
     initlializes a Cylindrical Surface
         @param  r   the radius of the cylinder
         @param  top the top point of the cylinder
         @precondition   the droplet is centered at [0,0,0]
     */
-    init(r, top) {
+    init(r, top){
         // the radius of the cylinder
         self.r = r
         // the center coordinate of the cylinder
         self.center = Matrix([0,0,top-r])
     }
-
     /*
-    Gets the energy of the surface
-        @param  x,y,z -> refers to the coordinate at this point
-        @return the energy of the surface
-    */
-    getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2 }
-
+     get the scalar potential at a point.
+     returns 0 if the point is on the surface, other wise some other int will be returned.
+        @param x, y, z: coordinates of the point
+        @return scalar: scalar potential at the point (x,y,z)
+     */
+    getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2}
     /*
-    Gets the gradient energy/change in energy of the surface, 
-        @param  x,y,z -> refers to the coordinate at this point
-        @return the gradient energy of the surface
-    */
-    getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])]) }
-
+     get the gradient of the scalar potential at a point.
+     returns 0 if the point is on the surface, other wise some other int will be returned.
+        @param x, y, z: coordinates of the point
+        @return scalar: scalar potential at the point (x,y,z)
+     */
+    getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])])}
     /*
     Gets the title of the Surface
         @return the title of the sphere surface and its radius
     */
-    getTitle() { return "Cylinder r = ${self.r}" }
+    getTitle(){return "Cylender r = ${self.r}"}
 
 }
-
 /*
 SphericalSurface class, creates a spherical surface for the droplet to sit on
 */
@@ -114,36 +104,44 @@ class SphericalSurface is Surface {
         @param  center the center point of the sphere
         @precondition   the droplet is centered at [0,0,0]
     */
-    init(r,center) {
+    init(r,center){
         // the radius of the sphere
         self.r = r
         // the center coordinate of the sphere
         self.center = center
     }
-
     /*
-    Gets the energy of the surface
-        @param  x,y,z -> refers to the coordinate at this point
-        @return the energy of the surface
-    */
+     get the gradient of the scalar potential at a point.
+     returns 0 if the point is on the surface, other wise some other int will be returned.
+        @param x, y, z: coordinates of the point
+        @return scalar: scalar potential at the point (x,y,z)
+     */
     getEnergy(x,y,z) { return sqrt((x-self.center[0])^2+(y-self.center[1])^2 +(z-self.center[2])^2-self.r^2) }
-    
     /*
-    Gets the gradient energy/change in energy of the surface, 
-        @param  x,y,z -> refers to the coordinate at this point
-        @return the gradient energy of the surface
-    */
-    getGradE(x,y,z) { return Matrix([2*x,2*y,2*z]) }
-    
+     get the gradient of the scalar potential at a point.
+     returns 0 if the point is on the surface, other wise some other int will be returned.
+        @param x, y, z: coordinates of the point
+        @return scalar: scalar potential at the point (x,y,z)
+     */
+    getGradE(x,y,z) { return Matrix([2*x,2*y,2*z])}
     /*
     Gets the title of the Surface
         @return the title of the sphere surface and its radius
     */
-    getTitle() { return "Sphere r = ${self.r}" }
+    getTitle(){return "Sphere r = ${self.r}"}
 
 }
 
+/*
+library class, contains all the meshes can be used experiments
+*/
 class MeshLibrary{
+    /*
+    generate a mesh of a cube 
+    TODO: **NOTE THATE THE PARAMETERS ARE NOT IMPLEMENTED YET**
+        @param length: length of a side of the cube
+        @param center: center of the cube
+    */
     cube(length, center) {
         var cube = PolyhedronMesh(
             [[-0.5,-0.5,-0.5],
@@ -163,10 +161,8 @@ class MeshLibrary{
             [4,5,7,6]])
         cube.addgrade(1)
         cube.addgrade(2)
-        
         return cube
     }
-
     /*
     creates a Planar Surface mesh to be display along with a PlanarSurface experiment
         @return a planarSurface
@@ -181,43 +177,66 @@ class MeshLibrary{
         return planarSurface
     }
 }
+/*
+Minimizer is a class that can be used to minimize an experiment.
+It can customize the minimization process by providing a list of steps to be performed.
+*/
 class Minimizer {
+    /*
+    The constructor takes an experiment class.
+        @param experiment: the experiment class to be minimized
+    */
     init(experiment){
         self.experiment = experiment
     }
+    /*
+    The function that performs the minimization.
+    It loops through all the steps in the list of steps and performs them.
+        @param steps: a list of steps to be performed.
+    */
     go(procedure) {
         for (step in procedure){
             if (step[0]=="relax") {
                     print "relaxing ${step[1]}" 
                     self.experiment.getOpt().relax(step[1])
-                    // self.experiment.getOpt().stepsize = 0.9
+                    // decrease stepsize, you may want to change 1.4 depending on the steps of optimization
                     self.experiment.getOpt().stepsize = self.experiment.getOpt().stepsize / 1.4
             } else if (step[0]=="refine") {
-                    // self.experiment.show()
-
                     print("refining")
                     self.refine()
-                    // self.experiment.show()
-
-            } else if (step[0] == "reguarlize") {
-                    print("reguarlizing")
+                    // self.experiment.show() // uncomment this line to see the refinement for debugging
+            } else if (step[0] == "regularize") {
+                    print("regularizing")
                     self.experiment.getRegularizer().linesearch(step[1])
                     self.experiment.getRegularizer().stepsize = self.experiment.getRegularizer().stepsize / 1.4
                     equiangulate(self.experiment.getMesh())
             }
         }
     }
+    /*
+    The function that performs the refinement.
+    */
     refine(){
         var mr=MeshRefiner([self.experiment.getMesh(), self.experiment.getSelections()])
         var refmap=mr.refine()
         self.experiment.updateFromRefmap(refmap)
     }
-
 }
 
-
+/*
+WettingExperiment is a class that can be used to perform a Wetting experiment.
+Here is where the formulation of the problem is defined.
+*/
 class WettingExperiment {
-    init(sigma, deltaSigma, surface) {
+    /*
+    The constructor takes a mesh, a list of selections, a list of surfaces, and a list of steps.
+        @param sigma: Coefficient of the surface tension energy
+        @param deltaSigma: coefficient of the surface adhesion energy
+        @param density: density of the wetting fluid
+        @param gravity: gravity acceleration 
+        @param surface: 
+    */
+    init(sigma, deltaSigma, density, gravity, surface) {
         self.sigma = sigma
         self.deltaSigma = deltaSigma
         self.surface = surface
@@ -228,14 +247,19 @@ class WettingExperiment {
         self.minimizationProcedure = [["relax",10000],["refine"],["relax",1000],["refine"],["relax",1000]]
 
     }
+    /*
+    The method finds the bottom selection of the mesh.
+    */
     createSelection() {
         var sel = Selection(self.mesh,fn(x,y,z) abs(self.surface.getEnergy(x,y,z))<self.bottomTolerence)
         sel.addgrade(1)
         sel.addgrade(2)
         return sel
     }
-
-setupProblem(){
+    /*
+    The method declare and initialize the optimization problem.
+    */
+    setupProblem(){
         self.problem = OptimizationProblem(self.mesh)
         self.bottomTolerence = 0.001
         self.bottomBound = self.createSelection()
@@ -252,15 +276,10 @@ setupProblem(){
         self.opt.stepsize = 0.01
         self.opt.quiet = true
 
-        // var kg = 1 // treating 1 morpho mass as 1 kg
-        // var second = 1 // treating 1 morpho time as 1 second
-        // var meter = 10^(8/3) // treating 1 morpho length cubed as 1 microliter
-        // var rho = 1000 * kg / (meter^3)
-        // var g = 9.8 * meter / (second^2)
-        // var sigma = 0.072 * kg / (second^2)
-
         var rho = 0.01
         var g = 45.4876
+        // sigma = 0.72
+        // deltaSigma = ~0.5
 
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (((x[2]+0.5)^2/2)))
         self.problem.addenergy(gravitational_potential, prefactor=rho*g)
@@ -272,16 +291,32 @@ setupProblem(){
         self.ropt = ShapeOptimizer(self.regproblem,self.mesh)
         self.ropt.quiet = true
     }
+    /*
+    perform minimization for the wetting experiment.
+    */
     minimize(){
         self.myMinimizer = Minimizer(self)
         self.myMinimizer.go(self.minimizationProcedure)
     }
+    /*
+    get the mesh of the experiment.
+        @return mesh: the mesh of the experiment
+    */
     getMesh(){
         return self.mesh
     }
+    /*
+    get the current bottom bound selections of the experiment.
+        @return Selection: self.bottomBound of the experiment
+    */
     getSelections() {
         return self.bottomBound
     }
+    /*
+    update the experiment from the refmap. 
+    use this function to update the mesh, bottom bound selections, and the bottom Tolerance.
+        @param refmap: the refmap to update the mesh
+    */
     updateFromRefmap(refmap) {
         self.bottomTolerence = self.bottomTolerence/2
         self.mesh = refmap[self.mesh]
@@ -293,12 +328,27 @@ setupProblem(){
         for (el in [self.regproblem, self.ropt]) el.update(refmap) // Update the problem
         self.bottomBound = refmap[self.bottomBound]
     }
+    /*
+    get the current shape optimizer of the experiment.
+        @return ShapeOptimizer: self.opt of the experiment
+    */
     getOpt(){
         return self.opt
     }
+    /*
+    get the current regularizer of the experiment.
+        @return ShapeOptimizer: self.ropt of the experiment
+    */
     getRegularizer(){
         return self.ropt
     }
+    /*
+    Show the current mesh of the experiment.
+        @param title: String of the title of the graphic window
+        @param highlight: Boolean wheather the selection to highlight the bound or not
+        @param bound: Selection bound to highlight in the mesh
+        @param returning: Boolean wheather the graphic window is returning from this method or not
+    */
     show(title=nil, highlightBound=true, bound=nil, returning=false) {
         var graphic
         // if high light bound is true, we highlight the bottom bound by default. highl light specified other wise
@@ -311,10 +361,16 @@ setupProblem(){
             graphic = plotmesh(self.getMesh(), grade=[0,1,2])
         }
         // show the graphic or return
-        // graph += self.surface.show()
         if (returning)
             return graphic
 
+        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
+        var graphic2 = plotmesh(surface, grade=[2])
+        graphic.background = White
+        graphic2.background = White
+        var g = graphic + graphic2
+
+        // if no custom title is passed in we show all the param as title
         if (!title) {
             g.title = self.getTitle()
         }
@@ -323,23 +379,9 @@ setupProblem(){
         }
         Show(g)
     }
-
     /*
-    saveImage uses povray to save an image of the model as a PNG file
-        @params graphic    the graphic to be saved
-    */
-    saveImage(mesh) {
-        var g = plotmesh(graphic)
-        g.background = White
-        var pov = POVRaytracer(g)
-        pov.viewpoint=Matrix([0,-5,-5])
-        pov.viewangle=35
-        pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
-        pov.render("out.pov")
-    }
-
-    /*
-    getTitles gets the title of the experiment and hows inputted parameters and surface title
+    Gets the title of the Surface
+        @return the title of a graphic window
     */
     getTitle() {
         return "sigma=${self.sigma}; deltaSigma=${self.deltaSigma};" + self.surface.getTitle()
