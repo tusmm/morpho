@@ -19,26 +19,26 @@ class Surface {
     Gets the set Scalar Potential to apply on the bottom surface of an 
     experiment. 
     */
-    getPinningFunctional(){
+    getPinningFunctional() {
         return ScalarPotential(self.getEnergy,self.getGradE)
     }
     
     /*
     Gets the name of the experiment. 
     */
-    getTitle() { return "${self.name}"}
+    getTitle() { return "${self.name}" }
 }
 /*
 Planar surface class, contains implementation of a flat surface.
 */
-class PlanarSurface is Surface{
+class PlanarSurface is Surface {
     /*
     initializes a Planar Surface
         @param  n   the normal of the surface
         @param  point   the center point of the surface
         @precondition   the droplet is centered at [0,0,0]
     */
-    init(n = nil, point = nil) {
+    init (n = nil, point = nil) {
         if (isnil(n)) self.normal = Matrix([0,0,1])
         else self.normal = n
 
@@ -54,14 +54,14 @@ class PlanarSurface is Surface{
         @param  x,y,z -> refers to the coordinate at this point
         @return the energy of the surface
     */
-    getEnergy(x,y,z) {return self.normal.inner(Matrix([x,y,z])-self.point)}
+    getEnergy(x,y,z) { return self.normal.inner(Matrix([x,y,z])-self.point) }
 
     /*
     Gets the gradient energy/change in energy of the surface, 
         @param  x,y,z -> refers to the coordinate at this point
         @return the gradient energy of the surface
     */
-    getGradE(x,y,z) {return self.normal}
+    getGradE(x,y,z) { return self.normal }
 
 }
 
@@ -75,7 +75,7 @@ class CylindricalSurface is Surface {
         @param  top the top point of the cylinder
         @precondition   the droplet is centered at [0,0,0]
     */
-    init(r, top){
+    init(r, top) {
         // the radius of the cylinder
         self.r = r
         // the center coordinate of the cylinder
@@ -87,20 +87,20 @@ class CylindricalSurface is Surface {
         @param  x,y,z -> refers to the coordinate at this point
         @return the energy of the surface
     */
-    getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2}
+    getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2 }
 
     /*
     Gets the gradient energy/change in energy of the surface, 
         @param  x,y,z -> refers to the coordinate at this point
         @return the gradient energy of the surface
     */
-    getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])])}
+    getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])]) }
 
     /*
     Gets the title of the Surface
         @return the title of the sphere surface and its radius
     */
-    getTitle(){return "Cylinder r = ${self.r}"}
+    getTitle() { return "Cylinder r = ${self.r}" }
 
 }
 
@@ -114,7 +114,7 @@ class SphericalSurface is Surface {
         @param  center the center point of the sphere
         @precondition   the droplet is centered at [0,0,0]
     */
-    init(r,center){
+    init(r,center) {
         // the radius of the sphere
         self.r = r
         // the center coordinate of the sphere
@@ -133,13 +133,13 @@ class SphericalSurface is Surface {
         @param  x,y,z -> refers to the coordinate at this point
         @return the gradient energy of the surface
     */
-    getGradE(x,y,z) { return Matrix([2*x,2*y,2*z])}
+    getGradE(x,y,z) { return Matrix([2*x,2*y,2*z]) }
     
     /*
     Gets the title of the Surface
         @return the title of the sphere surface and its radius
     */
-    getTitle(){return "Sphere r = ${self.r}"}
+    getTitle() { return "Sphere r = ${self.r}" }
 
 }
 
@@ -201,8 +201,8 @@ class Minimizer {
 
             } else if (step[0] == "reguarlize") {
                     print("reguarlizing")
-                    self.experiment.getRegualrizer().linesearch(step[1])
-                    self.experiment.getRegualrizer().stepsize = self.experiment.getRegualrizer().stepsize / 1.4
+                    self.experiment.getRegularizer().linesearch(step[1])
+                    self.experiment.getRegularizer().stepsize = self.experiment.getRegularizer().stepsize / 1.4
                     equiangulate(self.experiment.getMesh())
             }
         }
@@ -261,8 +261,6 @@ setupProblem(){
 
         var rho = 0.01
         var g = 45.4876
-        // sigma = 0.72
-        // deltaSigma = ~0.5
 
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (((x[2]+0.5)^2/2)))
         self.problem.addenergy(gravitational_potential, prefactor=rho*g)
@@ -298,7 +296,7 @@ setupProblem(){
     getOpt(){
         return self.opt
     }
-    getRegualrizer(){
+    getRegularizer(){
         return self.ropt
     }
     show(title=nil, highlightBound=true, bound=nil, returning=false) {
