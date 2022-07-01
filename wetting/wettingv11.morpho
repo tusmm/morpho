@@ -1,4 +1,9 @@
 //surfaces.morpho
+/*
+This file utilizes the Morpho programming language to simulate the 
+contact angle experiment. 
+*/
+
 import functionals
 import meshtools
 import optimize
@@ -6,15 +11,34 @@ import plot
 import color
 import povray
 
+/*
+Surface class, parent class that changes the surface the droplet
+is sitting on. 
+*/
 class Surface {
-
+    /*
+    Gets the set Scalar Potential to apply on the bottom surface of an 
+    experiment. 
+    */
     getPinningFunctional(){
         return ScalarPotential(self.getEnergy,self.getGradE)
     }
+    
+    /*
+    Gets the name of the experiment. 
+    */
     getTitle() { return "${self.name}"}
 }
+/*
+Planar surface class, contains implementation of a flat surface.
+*/
 class PlanarSurface is Surface{
-
+    /*
+    initializes a Planar Surface
+        @param  n   the normal of the surface
+        @param  point   the center point of the surface
+        @precondition   the droplet is centered at [0,0,0]
+    */
     init(n = nil, point = nil) {
         if (isnil(n)) self.normal = Matrix([0,0,1])
         else self.normal = n
@@ -22,31 +46,100 @@ class PlanarSurface is Surface{
         if (isnil(point)) self.point = Matrix([0,0,-0.5])
         else self.point = point
 
+        // the name of the Surface
         self.name = "Plane"
     }
+
+    /*
+    Gets the energy of the surface
+        @param  x,y,z -> refers to the coordinate at this point
+        @return the energy of the surface
+    */
     getEnergy(x,y,z) {return self.normal.inner(Matrix([x,y,z])-self.point)}
+
+     /*
+    Gets the gradient energy, the normal of the surface
+        @param  x,y,z -> refers to the coordinate at this point
+        @return the gradient energy of the surface
+    */
     getGradE(x,y,z) {return self.normal}
 
 }
 
-class CylendricalSurface is Surface {
+/*
+CylindricalSurface class, creates a cylindrical surface for the droplet to sit on
+*/
+class CylindricalSurface is Surface {
+    /*
+    initlializes a Cylindrical Surface
+        @param  r   the radius of the cylinder
+        @param  top the top point of the cylinder
+        @precondition   the droplet is centered at [0,0,0]
+    */
     init(r, top){
+        // the radius of the cylinder
         self.r = r
+        // the center coordinate of the cylinder
         self.center = Matrix([0,0,top-r])
     }
+
+    /*
+    Gets the energy of the surface
+        @param  x,y,z -> refers to the coordinate at this point
+        @return the energy of the surface
+    */
     getEnergy(x,y,z) { return y^2+(z-self.center[2])^2-self.r^2}
+
+    /*
+    Gets the gradient energy, the normal of the surface
+        @param  x,y,z -> refers to the coordinate at this point
+        @return the gradient energy of the surface
+    */
     getGradE(x,y,z) { return Matrix([0,2*y,2*(z-self.center[2])])}
-    getTitle(){return "Cylender r = ${self.r}"}
+
+    /*
+    Gets the title of the Surface
+        @return the title of the sphere surface and its radius
+    */
+    getTitle(){return "Cylinder r = ${self.r}"}
 
 }
 
+/*
+SphericalSurface class, creates a spherical surface for the droplet to sit on
+*/
 class SphericalSurface is Surface {
+    /*
+    Initlializes a Spherical Surface
+        @param  r   the radius of the sphere
+        @param  center the center point of the sphere
+        @precondition   the droplet is centered at [0,0,0]
+    */
     init(r,center){
+        // the radius of the sphere
         self.r = r
+        // the center coordinate of the sphere
         self.center = center
     }
+
+    /*
+    Gets the energy of the surface
+        @param  x,y,z -> refers to the coordinate at this point
+        @return the energy of the surface
+    */
     getEnergy(x,y,z) { return sqrt((x-self.center[0])^2+(y-self.center[1])^2 +(z-self.center[2])^2-self.r^2) }
+    
+    /*
+    Gets the gradient energy, the normal of the surface
+        @param  x,y,z -> refers to the coordinate at this point
+        @return the gradient energy of the surface
+    */
     getGradE(x,y,z) { return Matrix([2*x,2*y,2*z])}
+    
+    /*
+    Gets the title of the Surface
+        @return the title of the sphere surface and its radius
+    */
     getTitle(){return "Sphere r = ${self.r}"}
 
 }
@@ -71,7 +164,22 @@ class MeshLibrary{
             [4,5,7,6]])
         cube.addgrade(1)
         cube.addgrade(2)
+        
         return cube
+    }
+
+    /*
+    creates a Planar Surface mesh to be display along with a PlanarSurface experiment
+        @return a planarSurface
+    */
+    planarSurface() {
+        var planarSurface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5],
+                        [-2.5,2.5,-1],[2.5,2.5,-1],[-2.5,-2.5,-1],[2.5,-2.5,-1]],
+
+                        [[0,1,3,2], [0,1,5,4], [0,2,6,4], [7,3,2,6],
+                        [1,3,7,5], [4,6,7,5]])
+
+        return planarSurface
     }
 }
 class Minimizer {
@@ -210,18 +318,6 @@ setupProblem(){
         if (returning)
             return graphic
 
-        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5]],[[0,2,3,1]])
-        var graphic2 = plotmesh(surface, grade=[2])
-        graphic.background = White
-        graphic2.background = White
-        var g = graphic + graphic2
-
-        // var pov = POVRaytracer(g)
-        // pov.viewpoint=Matrix([0,-5,-5])
-        // pov.viewangle=35
-        // pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
-        // pov.render("out.pov")
-        // if no custom title is passed in we show all the param as title
         if (!title) {
             g.title = self.getTitle()
         }
@@ -230,6 +326,20 @@ setupProblem(){
         }
         Show(g)
     }
+
+    saveImage(mesh) {
+        var g = plotmesh(mesh)
+        g.background = White
+        var pov = POVRaytracer(g)
+        pov.viewpoint=Matrix([0,-5,-5])
+        pov.viewangle=35
+        pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
+        pov.render("out.pov")
+    }
+
+    /*
+    getTitles gets the title of the experiment and hows inputted parameters and surface title
+    */
     getTitle() {
         return "sigma=${self.sigma}; deltaSigma=${self.deltaSigma};" + self.surface.getTitle()
     }
@@ -304,18 +414,41 @@ setupProblem(){
 
 }
 
-
+/*
+ExperimentManager class, holds all the experiments and their modifications
+in one class. 
+*/
 class ExpermentManager {
+    exp1() {
+        var myDroplet = WettingExperiment(1,0.5,PlanarSurface())
+        myDroplet.setupProblem()
+        myDroplet.show(highlightBound = true)
+        myDroplet.minimize()
+        myDroplet.show(highlightBound = true)
+    }
+    exp2() {
+        var myDroplet = WettingExperiment(0.72,0.5,CylendricalSurface(1,-0.5))
+        myDroplet.minimizationProcedure = [["relax",500],["refine"],
+                                                ["relax",400],["refine"],
+                                                ["relax",300],["refine"],
+                                                ["relax",10]]
+        myDroplet.setupProblem()
+        myDroplet.show(highlightBound = true)
+        myDroplet.minimize()
+        myDroplet.show(highlightBound = true)
+    }
     exp3() {
-        // WettingExperiment(sigma, delta sigma, type_of_surface)
-        var myDroplet = WettingExperiment(0.72,0.5,PlanarSurface()) // true sigma
-        // var myDroplet = WettingExperiment(0.72, -0.2, PlanarSurface()) // glass ~ 50 degrees
-        // var myDroplet = WettingExperiment(0.72, 0, PlanarSurface()) // control ~ 90 degrees
-        // var myDroplet = WettingExperiment(0.72,-0.095,PlanarSurface()) // p1 ~ 82.6 degrees
-        // var myDroplet = WettingExperiment(0.72, -0.0195, PlanarSurface()) // p2 ~ 88.8 degrees
-        // var myDroplet = WettingExperiment(0.72, -0.056, PlanarSurface()) // p2 pos ~ 85.94 degrees
-        // var myDroplet = WettingExperiment(0.72, 0.205, PlanarSurface()) // p2 neg ~ 105.72 degrees
-        // var myDroplet = WettingExperiment(0.05, 0.205, PlanarSurface()) // oil degrees
+        /*
+        var myDroplet = WettingExperiment(0.72, 0, PlanarSurface()) // control ~ 90 degrees
+        var myDroplet = WettingExperiment(0.72, -0.2, PlanarSurface()) // glass ~ 50 degrees
+        var myDroplet = WettingExperiment(0.72,-0.095,PlanarSurface()) // p1 ~ 82.6 degrees
+        var myDroplet = WettingExperiment(0.72, -0.0195, PlanarSurface()) // p2 ~ 88.8 degrees
+        var myDroplet = WettingExperiment(0.72, -0.056, PlanarSurface()) // p2 pos ~ 85.94 degrees
+        var myDroplet = WettingExperiment(0.72, 0.205, PlanarSurface()) // p2 neg ~ 105.72 degrees
+        var myDroplet = WettingExperiment(0.05, 0.205, PlanarSurface()) // oil degrees
+        */
+
+        // defines the optimization routine 
         myDroplet.minimizationProcedure = [["relax",1000],["refine"],
                                             ["relax",2000],["refine"],
                                             ["relax",2000],["refine"],
@@ -323,24 +456,6 @@ class ExpermentManager {
         myDroplet.setupProblem()
         myDroplet.minimize()
         myDroplet.show(highlightBound = true)
-        var surface = PolyhedronMesh([[-2.5,2.5,-0.5],[2.5,2.5,-0.5],[-2.5,-2.5,-0.5],[2.5,-2.5,-0.5],
-                        [-2.5,2.5,-1],[2.5,2.5,-1],[-2.5,-2.5,-1],[2.5,-2.5,-1]],
-
-                        [[0,1,3,2], [0,1,5,4], [0,2,6,4], [7,3,2,6],
-                        [1,3,7,5], [4,6,7,5]])
-
-        var graphic2 = plotmesh(surface, grade=[2])
-
-        var g = plotmesh(myDroplet.getMesh()) + graphic2
-
-        g.background = White
-
-        var pov = POVRaytracer(g)
-        pov.viewpoint=Matrix([0, -1.8, 0.5])
-        pov.viewangle=90
-        pov.light=[Matrix([10,10,10]), Matrix([-10,-10,10])]
-        var fileName = "i_${myDroplet.getContactAngle()[1] / 100}.pov"
-        pov.render(fileName, quiet=true, display=false)
 
         var angle = myDroplet.getContactAngle()
         print angle[0]
