@@ -240,6 +240,8 @@ class WettingExperiment {
         self.sigma = sigma
         self.deltaSigma = deltaSigma
         self.surface = surface
+        self.rho = density
+        self.g = gravity
 
         var myLibrary = MeshLibrary()
         self.mesh = myLibrary.cube(1,Matrix([0,0,0])) // makes a cube with side length one cenered at 0,0,0
@@ -276,13 +278,8 @@ class WettingExperiment {
         self.opt.stepsize = 0.01
         self.opt.quiet = true
 
-        var rho = 0.01
-        var g = 45.4876
-        // sigma = 0.72
-        // deltaSigma = ~0.5
-
         var gravitational_potential = AreaIntegral(fn(x) abs(Matrix([0,0,1]).inner(normal())) * (((x[2]+0.5)^2/2)))
-        self.problem.addenergy(gravitational_potential, prefactor=rho*g)
+        self.problem.addenergy(gravitational_potential, prefactor=self.rho*self.g * 0) // multiplying by 0 because gravity can be neglected due to bond number
 
         self.regproblem = OptimizationProblem(self.mesh)
         self.regproblem.addenergy(EquiElement())
@@ -487,15 +484,16 @@ class ExpermentManager {
         var myDroplet = WettingExperiment(0.72,-0.095,PlanarSurface()) // p1 ~ 82.6 degrees
         var myDroplet = WettingExperiment(0.72, -0.0195, PlanarSurface()) // p2 ~ 88.8 degrees
         var myDroplet = WettingExperiment(0.72, -0.056, PlanarSurface()) // p2 pos ~ 85.94 degrees
-        var myDroplet = WettingExperiment(0.72, 0.205, PlanarSurface()) // p2 neg ~ 105.72 degrees
         var myDroplet = WettingExperiment(0.05, 0.205, PlanarSurface()) // oil degrees
         */
+        var myDroplet = WettingExperiment(0.72, 0.205, 0.01, 45.4876, PlanarSurface()) // p2 neg ~ 105.72 degrees
+
 
         // defines the optimization routine 
         myDroplet.minimizationProcedure = [["relax",1000],["refine"],
                                             ["relax",2000],["refine"],
-                                            ["relax",2000],["refine"],
-                                            ["relax",3000], ["regularize", 3]]
+                                            ["relax",200],["refine"],
+                                            ["relax",100], ["regularize", 3]]
         myDroplet.setupProblem()
         myDroplet.minimize()
         myDroplet.show(highlightBound = true)
